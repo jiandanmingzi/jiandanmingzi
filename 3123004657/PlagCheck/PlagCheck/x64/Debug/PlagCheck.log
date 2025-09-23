@@ -1,0 +1,2 @@
+﻿  FileMana.hpp
+C:\apps\VisualStudio\IDE\VC\Tools\MSVC\14.43.34808\include\filesystem(12): warning STL4038: The contents of <filesystem> are available only with C++17 or later.
