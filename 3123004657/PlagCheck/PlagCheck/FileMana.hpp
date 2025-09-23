@@ -7,8 +7,6 @@
 #include <stdexcept>
 #include <filesystem>
 
-using namespace std;
-
 /*
     @brief 文件管理类
     @details 提供文件的打开、读取、写入和关闭功能
@@ -28,8 +26,8 @@ using namespace std;
 class FileManager
 {
     private :
-        string filePath;
-        fstream fileStream;
+        std::string filePath;
+        std::fstream fileStream;
         bool isOpen = false;
         bool readable = false;
         bool writable = false;
@@ -43,23 +41,23 @@ class FileManager
         @throws invalid_argument 如果读写模式均为false
         @throws runtime_error 如果文件无法打开
         */
-        FileManager(const string& path, bool read, bool write)
+        FileManager(const std::string& path, bool read, bool write)
             : filePath(path), readable(read), writable(write)
         {
-            ios_base::openmode mode = ios_base::binary;
+            std::ios_base::openmode mode = std::ios_base::binary;
             if (readable && writable) {
-                mode |= ios_base::in | ios_base::out;
+                mode |= std::ios_base::in | std::ios_base::out;
             } else if (readable) {
-                mode |= ios_base::in;
+                mode |= std::ios_base::in;
             } else if (writable) {
-                mode |= ios_base::out | ios_base::trunc;
+                mode |= std::ios_base::out | std::ios_base::trunc;
             } else {
-                throw invalid_argument("File must be opened in at least read or write mode.");
+                throw std::invalid_argument("File must be opened in at least read or write mode.");
             }
 
             fileStream.open(filePath, mode);
             if (!fileStream.is_open()) {
-                throw runtime_error("Failed to open file: " + filePath + " in mode " + to_string(mode));
+                throw std::runtime_error("Failed to open file: " + filePath + " in mode " + std::to_string(mode));
             }
             isOpen = true;
         }
@@ -106,17 +104,14 @@ class FileManager
             @return 返回文件内容的字符串
             @throws runtime_error 如果文件未打开或不可读
         */
-        string read_lines()
+        std::string read_lines()
         {
             if (!is_file_readable()) {
-                throw runtime_error("File is not open for reading.");
+                throw std::runtime_error("File is not open for reading.");
             }
-            stringstream buffer;
+            std::stringstream buffer;
             buffer << fileStream.rdbuf();
-            //清除标点符号和空格
-            string content = buffer.str();
-            content.erase(remove_if(content.begin(), content.end(),
-                [](unsigned char c) { return ispunct(c) || isspace(c); }), content.end());
+            std::string content = buffer.str();
             return content;
         }
 
@@ -126,10 +121,10 @@ class FileManager
             @return 如果写入成功返回true，否则返回false
             @throws runtime_error 如果文件未打开或不可写
         */
-        bool write_lines(const string& content)
+        bool write_lines(const std::string& content)
         {
             if (!is_file_writable()) {
-                throw runtime_error("File is not open for writing.");
+                throw std::runtime_error("File is not open for writing.");
             }
 
             fileStream << content;

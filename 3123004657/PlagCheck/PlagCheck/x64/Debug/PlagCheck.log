@@ -1,2 +1,8 @@
 ﻿  FileMana.hpp
-C:\apps\VisualStudio\IDE\VC\Tools\MSVC\14.43.34808\include\filesystem(12): warning STL4038: The contents of <filesystem> are available only with C++17 or later.
+  main.cpp
+  PlagCheck.cpp
+C:\cache\study\cpp\homework\jiandanmingzi\3123004657\PlagCheck\PlagCheck\PlagCheck.cpp(88,37): warning C4267: “return”: 从“size_t”转换到“int”，可能丢失数据
+  正在生成代码...
+  PlagCheck.vcxproj -> C:\cache\study\cpp\homework\jiandanmingzi\3123004657\PlagCheck\x64\Debug\main.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
