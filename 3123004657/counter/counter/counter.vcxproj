@@ -132,6 +132,11 @@
   <ItemGroup>
     <ClCompile Include="Myapp.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AnswerCheck.hpp" />
+    <ClInclude Include="CounterGenerator.hpp" />
+    <ClInclude Include="FileMana.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
