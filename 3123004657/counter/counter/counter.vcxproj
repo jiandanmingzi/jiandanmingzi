@@ -136,6 +136,7 @@
     <ClInclude Include="AnswerCheck.hpp" />
     <ClInclude Include="CounterGenerator.hpp" />
     <ClInclude Include="FileMana.hpp" />
+    <ClInclude Include="Fraction.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
