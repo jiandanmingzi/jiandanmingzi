@@ -91,11 +91,15 @@ class AnswerCheck{
         /**
          * @brief 从答案行中提取题号
          * @param String line 答案行字符串
-         * @return 题号，若无法提取则返回-1
+         * @return 题号
+         * @note 当检索不到时返回-1，表示无效题号
          */
         int getQuestionNumber(const std::string& line) {
             size_t dotPos = line.find('.');
             if (dotPos != std::string::npos) {
+                if (dotPos == 0) {
+                    return -1;
+                }
                 try {
                     return std::stoi(trim(line.substr(0, dotPos)));
                 } catch (...) {
@@ -109,32 +113,40 @@ class AnswerCheck{
          * @brief 从答案行中提取学生答案
          * @param String line 答案行字符串
          * @return 学生答案的分数表示
+         * @note 当检索不到时返回0/0，表示无效答案
          */
         Fraction getStudentAnswer(const std::string& line) {
             size_t equalPos = line.find('=');
             if (equalPos != std::string::npos) {
+                if (equalPos + 1 >= line.size()) {
+                    return Fraction(0, 0);
+                }
                 std::string ansStr = trim(line.substr(equalPos + 1));
                 Fraction fracAns = Fraction(ansStr);
                 fracAns.simplify();
                 return fracAns;
             }
-            return Fraction(0, 0); // 默认返回0/0,表示无效答案
+            return Fraction(0, 0);
         }
 
         /**
          * @brief 从答案行中提取正确答案
          * @param String line 答案行字符串
          * @return 正确答案的分数表示
+         * @note 当检索不到时返回0/1，表示答案为0
          */
         Fraction getCorrectAnswer(const std::string& line) {
             size_t dotPos = line.find('.');
             if (dotPos != std::string::npos) {
+                if (dotPos + 1 >= line.size()) {
+                    return Fraction(0, 1);
+                }
                 std::string ansStr = trim(line.substr(dotPos + 1));
                 Fraction fracAns = Fraction(ansStr);
                 fracAns.simplify();
                 return fracAns;
             }
-            return Fraction(0, 1); // 默认返回0/1
+            return Fraction(0, 1);
         }
 
         /**

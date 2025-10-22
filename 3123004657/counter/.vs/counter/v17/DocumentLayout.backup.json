@@ -3,20 +3,24 @@
   "WorkspaceRootPath": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\AnswerCheck.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\AnswerCheck.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\FileMana.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
-      "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\FileMana.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Myapp.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\Myapp.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\CounterGenerator.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\CounterGenerator.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Fraction.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\Fraction.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\AnswerCheck.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\AnswerCheck.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\FileMana.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{08F7C523-1C89-4598-BC9F-9E12B8BE1B12}|counter\\counter.vcxproj|solutionrelative:counter\\FileMana.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\PlagCheck\\PlagCheck\\PlagCheck.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
@@ -32,7 +36,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 9,
           "Children": [
             {
               "$type": "Bookmark",
@@ -43,21 +47,38 @@
               "Name": "ST:2:0:{34c7837f-3b3a-449c-bdf0-bdad86cbaf4a}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
+              "Title": "Fraction.hpp",
+              "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Fraction.hpp",
+              "RelativeDocumentMoniker": "counter\\Fraction.hpp",
+              "ToolTip": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Fraction.hpp",
+              "RelativeToolTip": "counter\\Fraction.hpp",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2025-10-21T15:15:34.516Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "CounterGenerator.hpp",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\CounterGenerator.hpp",
               "RelativeDocumentMoniker": "counter\\CounterGenerator.hpp",
               "ToolTip": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\CounterGenerator.hpp",
               "RelativeToolTip": "counter\\CounterGenerator.hpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
               "WhenOpened": "2025-10-19T13:24:16.196Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 3,
               "Title": "AnswerCheck.hpp",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\AnswerCheck.hpp",
               "RelativeDocumentMoniker": "counter\\AnswerCheck.hpp",
@@ -65,12 +86,11 @@
               "RelativeToolTip": "counter\\AnswerCheck.hpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T13:02:03.306Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T13:02:03.306Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "PlagCheck.h",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\PlagCheck\\PlagCheck\\PlagCheck.h",
               "RelativeDocumentMoniker": "..\\PlagCheck\\PlagCheck\\PlagCheck.h",
@@ -82,7 +102,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "PlagCheck.cpp",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\PlagCheck\\PlagCheck\\PlagCheck.cpp",
               "RelativeDocumentMoniker": "..\\PlagCheck\\PlagCheck\\PlagCheck.cpp",
@@ -94,7 +114,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "FileMana.hpp",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\FileMana.hpp",
               "RelativeDocumentMoniker": "counter\\FileMana.hpp",
@@ -102,18 +122,17 @@
               "RelativeToolTip": "counter\\FileMana.hpp",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2025-10-19T12:09:19.668Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-19T12:09:19.668Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Myapp.cpp",
               "DocumentMoniker": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Myapp.cpp",
               "RelativeDocumentMoniker": "counter\\Myapp.cpp",
               "ToolTip": "C:\\cache\\study\\cpp\\homework\\jiandanmingzi\\3123004657\\counter\\counter\\Myapp.cpp",
               "RelativeToolTip": "counter\\Myapp.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAaAAAAAAAAAA==",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAAB8AAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2025-10-19T09:09:05.239Z",
               "EditorCaption": ""

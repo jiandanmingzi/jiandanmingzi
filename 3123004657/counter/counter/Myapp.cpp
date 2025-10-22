@@ -24,6 +24,7 @@ int main(int argc, char* argv[]) {
     //解析命令行参数
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
+        std::cout << "Processing argument: " << i << arg << std::endl;
         if (arg == "-r") {
             if (i + 1 < argc) {
                 range = std::stoi(argv[i + 1]);
@@ -49,17 +50,17 @@ int main(int argc, char* argv[]) {
                 }else{
                     flag = CHECK_ANSWER_E;
                 }
-            } else if (arg == "-a") {
-                if (i + 1 < argc) {
-                    answerFileIndex = i + 1;
-                    i++;
-                    if (flag == GENERATE_COUNTER){
-                        std::cout << "WARNING : GENERATE_COUNTER has higher priority than CHECK_ANSWER." << std::endl;
-                    }else if (flag == CHECK_ANSWER_E){
-                        flag = CHECK_ANSWER;
-                    }else{
-                        flag = CHECK_ANSWER_A;
-                    }
+            }
+        }else if (arg == "-a") {
+            if (i + 1 < argc) {
+                answerFileIndex = i + 1;
+                i++;
+                if (flag == GENERATE_COUNTER){
+                    std::cout << "WARNING : GENERATE_COUNTER has higher priority than CHECK_ANSWER." << std::endl;
+                }else if (flag == CHECK_ANSWER_E){
+                    flag = CHECK_ANSWER;
+                }else{
+                    flag = CHECK_ANSWER_A;
                 }
             }
         }

@@ -115,6 +115,7 @@ std::unordered_map<std::string, int> Fraction::opPrecedence = {
     {"+", 1},
     {"-", 1},
     {"*", 2},
+    {"÷", 2},
     {"/", 2},
     {"(", 0},
     {")", 0}

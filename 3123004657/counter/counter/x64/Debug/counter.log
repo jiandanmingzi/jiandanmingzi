@@ -1,0 +1,5 @@
+﻿  Myapp.cpp
+C:\apps\VisualStudio\IDE\VC\Tools\MSVC\14.44.35207\include\filesystem(12): warning STL4038: The contents of <filesystem> are available only with C++17 or later.
+  counter.vcxproj -> C:\cache\study\cpp\homework\jiandanmingzi\3123004657\counter\x64\Debug\Myapp.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.
