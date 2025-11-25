@@ -1,0 +1,98 @@
+删除了超级管理员登出，因为无状态改变
+
+删除了创建函数，改用命令行创建
+users:
+CREATE TABLE IF NOT EXISTS users (
+                    account VARCHAR(20) PRIMARY KEY,       //账号
+                    username VARCHAR(255) UNIQUE, //用户名
+                    password VARCHAR(255) NOT NULL,        //密码
+                    is_banned BOOLEAN DEFAULT 0,           //是否封禁
+                    bio TEXT,                              //个人简介
+                    major VARCHAR(100),                    //专业
+                    grade VARCHAR(10),                     //年级
+                    role VARCHAR(10) DEFAULT NULL,     //师生身份
+                    is_admin BOOLEAN DEFAULT 0, //是否为管理员
+                    is_online BOOLEAN DEFAULT 0, //是否在线
+		    last_login_attempt INTEGER DEFAULT 0,
+		last_login_time INTEGER DEFAULT 0
+                    );
+posts:
+CREATE TABLE IF NOT EXISTS posts (
+                    post_id INTEGER PRIMARY KEY AUTOINCREMENT, // 帖子ID
+                    account VARCHAR(20) NOT NULL,      // 发帖人账号
+                    title VARCHAR(200) NOT NULL,       // 帖子标题
+                    content TEXT NOT NULL,             // 帖子内容
+                    category VARCHAR(20) DEFAULT NULL, //帖子类型
+                    is_anonymous BOOLEAN DEFAULT 0,    //是否匿名
+                    view_count INTEGER DEFAULT 0,      // 浏览量
+                    like_count INTEGER DEFAULT 0,      // 点赞数
+                    is_top BOOLEAN DEFAULT 0,          // 是否置顶
+                    comment_count INTEGER DEFAULT 0,   // 评论数
+                    is_deleted BOOLEAN DEFAULT 0,      // 软删除标记
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 创建时间
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 更新时间
+                    FOREIGN KEY (account) REFERENCES users(account) ON DELETE CASCADE // 外键关联用户
+                    );
+comments:
+CREATE TABLE IF NOT EXISTS comments (
+      comment_id INTEGER PRIMARY KEY AUTOINCREMENT, // 评论ID
+      post_id INTEGER NOT NULL,                    // 所属帖子ID
+      account VARCHAR(20) NOT NULL,               // 评论人账号
+      content TEXT NOT NULL,                       // 评论内容
+      parent_id INTEGER DEFAULT NULL, // 父评论ID（用于回复功能，NULL表示顶层评论）
+      like_count INTEGER DEFAULT 0,                  // 点赞数
+      is_deleted BOOLEAN DEFAULT 0,                  // 软删除标记
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 创建时间
+      FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE, // 外键关联帖子
+      FOREIGN KEY (account) REFERENCES users(account) ON DELETE CASCADE, // 外键关联用户
+      FOREIGN KEY (parent_id) REFERENCES comments(comment_id) ON DELETE CASCADE // 外键关联父评论
+      );
+user_likes:
+CREATE TABLE IF NOT EXISTS user_likes (
+      account VARCHAR(20) NOT NULL,                 // 点赞用户的账号
+      post_id INTEGER NOT NULL,                     // 被点赞的帖子ID
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 点赞时间
+      FOREIGN KEY (account) REFERENCES users(account) ON DELETE 
+      CASCADE, // 外键：关联用户表
+      FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE 
+      CASCADE,                 // 外键：关联帖子表
+      UNIQUE(account, post_id) // 唯一约束：防止用户对同一帖子重复点赞
+      );
+user_favortites:
+CREATE TABLE IF NOT EXISTS user_favorites (
+      account VARCHAR(20) NOT NULL,                 // 收藏用户的账号
+      post_id INTEGER NOT NULL,                      // 被收藏的帖子ID
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 收藏时间
+      FOREIGN KEY (account) REFERENCES users(account) ON DELETE 
+      CASCADE, // 外键：关联用户表
+      FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE 
+      CASCADE,                // 外键：关联帖子表
+      UNIQUE(account, post_id) // 唯一约束：防止用户对同一帖子重复收藏
+      );
+comment_likes:
+CREATE TABLE IF NOT EXISTS comment_likes (
+      account VARCHAR(20) NOT NULL,                 // 点赞用户的账号
+      comment_id INTEGER NOT NULL,                   // 被点赞的评论ID
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 点赞时间
+      FOREIGN KEY (account) REFERENCES users(account) ON DELETE 
+      CASCADE, // 外键：关联用户表
+      FOREIGN KEY (comment_id) REFERENCES comments(comment_id) ON 
+      DELETE CASCADE, // 外键：关联评论表
+      UNIQUE(account, comment_id) // 唯一约束：防止用户对同一评论重复点赞
+      );
+notifications:
+CREATE TABLE IF NOT EXISTS notifications (
+      notification_id INTEGER PRIMARY KEY AUTOINCREMENT, // 通知ID
+      receiver_account VARCHAR(20) NOT NULL, // 接收通知的用户账号
+      sender_account VARCHAR(20), // 发送通知的用户账号（系统通知时可为NULL）
+      type VARCHAR(20) NOT NULL, // 通知类型：comment(有人评论你的帖子)/reply(有人回复你的评论)/like(有人点赞你的帖子)/system(系统通知)
+      related_id INTEGER, // 相关ID（帖子ID或评论ID，根据type决定）
+      content TEXT NOT NULL, // 通知内容，例如："user2 评论了你的帖子《标题》"
+      is_read BOOLEAN DEFAULT 0, // 是否已读（0=未读，1=已读）
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 通知创建时间
+      FOREIGN KEY (receiver_account) REFERENCES users(account) ON DELETE 
+      CASCADE, // 外键：关联接收者
+      //当删除发送者用户时，不删除通知，而是将发送者设为NULL
+      FOREIGN KEY (sender_account) REFERENCES users(account) ON DELETE SET 
+      NULL // 外键：关联发送者
+      );

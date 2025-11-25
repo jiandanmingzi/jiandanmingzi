@@ -7,177 +7,6 @@
 #define ADMIN_ACCOUNT "admin"     // 管理员账号
 #define ADMIN_PASSWORD "admin123" // 管理员密码
 sqlite3 *db = nullptr;
-// 创建数据库和表
-namespace sql {
-void createuser() { //建立用户表
-  const char *sql = "CREATE TABLE IF NOT EXISTS users ("
-                    "account VARCHAR(20) PRIMARY KEY,"       //账号
-                    "username VARCHAR(255) UNIQUE NOT NULL," //用户名
-                    "password VARCHAR(255) NOT NULL,"        //密码
-                    "is_banned BOOLEAN DEFAULT 0,"           //是否封禁
-                    "bio TEXT,"                              //个人简介
-                    "major VARCHAR(100),"                    //专业
-                    "grade VARCHAR(10),"                     //年级
-                    "is_admin BOOLEAN DEFAULT 0,"  //是否为管理员
-                    "is_online BOOLEAN DEFAULT 0," //是否在线
-                    ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "User table created successfully" << std::endl;
-  }
-}
-void createpost() { //建立帖子表
-  const char *sql = "CREATE TABLE IF NOT EXISTS posts ("
-                    "post_id INTEGER PRIMARY KEY AUTOINCREMENT," // 帖子ID
-                    "account VARCHAR(20) NOT NULL,"      // 发帖人账号
-                    "title VARCHAR(200) NOT NULL,"       // 帖子标题
-                    "content TEXT NOT NULL,"             // 帖子内容
-                    "grade VARCHAR(10) DEFAULT NULL,"    //年级
-                    "major VARCHAR(100) DEFAULT NULL,"   //专业
-                    "role VARCHAR(10) DEFAULT NULL,"     //师生身份
-                    "category VARCHAR(20) DEFAULT NULL," //帖子类型
-                    "is_anonymous BOOLEAN DEFAULT 0,"    //是否匿名
-                    "view_count INTEGER DEFAULT 0,"      // 浏览量
-                    "like_count INTEGER DEFAULT 0,"      // 点赞数
-                    "is_top BOOLEAN DEFAULT 0,"          // 是否置顶
-                    "comment_count INTEGER DEFAULT 0,"   // 评论数
-                    "is_deleted BOOLEAN DEFAULT 0,"      // 软删除标记
-                    "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 创建时间
-                    "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 更新时间
-                    "FOREIGN KEY (account) REFERENCES users(account) ON DELETE "
-                    "CASCADE" // 外键关联用户
-                    ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "Post table created successfully" << std::endl;
-  }
-}
-void createcomment() { // 建立评论表
-  const char *sql =
-      "CREATE TABLE IF NOT EXISTS comments ("
-      "comment_id INTEGER PRIMARY KEY AUTOINCREMENT," // 评论ID
-      "post_id INTEGER NOT NULL,"                     // 所属帖子ID
-      "account VARCHAR(20) NOT NULL,"                 // 评论人账号
-      "content TEXT NOT NULL,"                        // 评论内容
-      "parent_id INTEGER DEFAULT NULL," // 父评论ID（用于回复功能，NULL表示顶层评论）
-      "like_count INTEGER DEFAULT 0,"                  // 点赞数
-      "is_deleted BOOLEAN DEFAULT 0,"                  // 软删除标记
-      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 创建时间
-      "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE "
-      "CASCADE," // 外键关联帖子
-      "FOREIGN KEY (account) REFERENCES users(account) ON DELETE "
-      "CASCADE," // 外键关联用户
-      "FOREIGN KEY (parent_id) REFERENCES comments(comment_id) ON "
-      "DELETE CASCADE" // 外键关联父评论
-      ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "Comment table created successfully" << std::endl;
-  }
-}
-void createlike() { // 建立帖子点赞表
-  const char *sql =
-      "CREATE TABLE IF NOT EXISTS user_likes ("
-      "account VARCHAR(20) NOT NULL,"                  // 点赞用户的账号
-      "post_id INTEGER NOT NULL,"                      // 被点赞的帖子ID
-      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 点赞时间
-      "FOREIGN KEY (account) REFERENCES users(account) ON DELETE "
-      "CASCADE," // 外键：关联用户表
-      "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE "
-      "CASCADE,"                 // 外键：关联帖子表
-      "UNIQUE(account, post_id)" // 唯一约束：防止用户对同一帖子重复点赞
-      ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "User_likes table ready" << std::endl;
-  }
-}
-
-void createfavorite() { // 建立收藏表
-  const char *sql =
-      "CREATE TABLE IF NOT EXISTS user_favorites ("
-      "account VARCHAR(20) NOT NULL,"                  // 收藏用户的账号
-      "post_id INTEGER NOT NULL,"                      // 被收藏的帖子ID
-      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 收藏时间
-      "FOREIGN KEY (account) REFERENCES users(account) ON DELETE "
-      "CASCADE," // 外键：关联用户表
-      "FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE "
-      "CASCADE,"                 // 外键：关联帖子表
-      "UNIQUE(account, post_id)" // 唯一约束：防止用户对同一帖子重复收藏
-      ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "User_favorites table ready" << std::endl;
-  }
-}
-void createcommentlike() { // 建立评论点赞表
-  const char *sql =
-      "CREATE TABLE IF NOT EXISTS comment_likes ("
-      "account VARCHAR(20) NOT NULL,"                  // 点赞用户的账号
-      "comment_id INTEGER NOT NULL,"                   // 被点赞的评论ID
-      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 点赞时间
-      "FOREIGN KEY (account) REFERENCES users(account) ON DELETE "
-      "CASCADE," // 外键：关联用户表
-      "FOREIGN KEY (comment_id) REFERENCES comments(comment_id) ON "
-      "DELETE CASCADE," // 外键：关联评论表
-      "UNIQUE(account, comment_id)" // 唯一约束：防止用户对同一评论重复点赞
-      ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "Comment_likes table ready" << std::endl;
-  }
-}
-void createnotification() { // 建立通知表
-  const char *sql =
-      "CREATE TABLE IF NOT EXISTS notifications ("
-      "notification_id INTEGER PRIMARY KEY AUTOINCREMENT," // 通知ID
-      "receiver_account VARCHAR(20) NOT NULL," // 接收通知的用户账号
-      "sender_account VARCHAR(20)," // 发送通知的用户账号（系统通知时可为NULL）
-      "type VARCHAR(20) NOT NULL," // 通知类型：comment(有人评论你的帖子)/reply(有人回复你的评论)/like(有人点赞你的帖子)/system(系统通知)
-      "related_id INTEGER," // 相关ID（帖子ID或评论ID，根据type决定）
-      "content TEXT NOT NULL," // 通知内容，例如："user2 评论了你的帖子《标题》"
-      "is_read BOOLEAN DEFAULT 0," // 是否已读（0=未读，1=已读）
-      "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," // 通知创建时间
-      "FOREIGN KEY (receiver_account) REFERENCES users(account) ON DELETE "
-      "CASCADE," // 外键：关联接收者
-      //当删除发送者用户时，不删除通知，而是将发送者设为NULL
-      "FOREIGN KEY (sender_account) REFERENCES users(account) ON DELETE SET "
-      "NULL" // 外键：关联发送者
-      ");";
-  char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql, nullptr, nullptr, &err_msg);
-  if (rc != SQLITE_OK) {
-    std::cerr << "SQL error: " << err_msg << std::endl;
-    sqlite3_free(err_msg);
-  } else {
-    std::cout << "Notifications table ready" << std::endl;
-  }
-}
-} // namespace sql
 // 用户接口
 namespace UserAPI {
 // POST /api/auth/login - 用户登录
@@ -186,78 +15,98 @@ void handleLogin(const httplib::Request &req, httplib::Response &res) {
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
   std::string password = body["password"];
-  std::string sql =
-      "SELECT password, is_banned, is_admin FROM users WHERE account='" +
-      account + "';";
   char *err_msg = nullptr;
+
+  std::string sql = "SELECT password, is_banned, is_admin, last_login_attempt, "
+                    "last_login_time FROM users WHERE account='" +
+                    account + "';";
   struct LoginData {
-    bool success;
-    std::string password;
+    std::string db_password;
     bool is_banned;
     bool is_admin;
+    int last_login_attempt;
+    int last_login_time;
+    bool found;
   };
   LoginData login_data;
-  login_data.success = false;
-  login_data.password = password;
+  login_data.db_password = "";
   login_data.is_banned = false;
   login_data.is_admin = false;
-  //判断用户密码是否正确及是否被封禁
+  login_data.last_login_attempt = 0;
+  login_data.last_login_time = 0;
+  login_data.found = false;
+
   int rc = sqlite3_exec(
       db, sql.c_str(),
       [](void *data, int argc, char **argv, char **azColName) -> int {
-        std::string db_password = argv[0] ? argv[0] : "";
-        bool is_banned = argv[1] ? std::string(argv[1]) == "1" : false;
-        bool is_admin = argv[2] ? std::string(argv[2]) == "1" : false;
         auto *login_data = static_cast<LoginData *>(data);
-        login_data->is_banned = is_banned;
-        login_data->is_admin = is_admin;
-        if (is_banned) {
-          login_data->success = false;
-        } else if (db_password == login_data->password) {
-          login_data->success = true;
-        } else {
-          login_data->success = false;
-        }
+        login_data->db_password = argv[0] ? argv[0] : "";
+        login_data->is_banned = argv[1] ? std::string(argv[1]) == "1" : false;
+        login_data->is_admin = argv[2] ? std::string(argv[2]) == "1" : false;
+        login_data->last_login_attempt = argv[3] ? std::stoi(argv[3]) : 0;
+        login_data->last_login_time = argv[4] ? std::stoi(argv[4]) : 0;
+        login_data->found = true;
         return 0;
       },
       &login_data, &err_msg);
+
+  nlohmann::json response_json;
+  int now = static_cast<int>(time(nullptr));
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "login_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
-  }
-  nlohmann::json response_json;
-  if (login_data.is_banned) {
-    // 用户被封禁
+    response_json["status"] = "failure";
+    response_json["message"] = "Login error";
+    res.status = 500;
+  } else if (!login_data.found) {
+    response_json["status"] = "failure";
+    response_json["message"] = "User not found";
+    res.status = 404;
+  } else if (login_data.is_banned) {
     response_json["status"] = "failure";
     response_json["message"] = "User is banned";
     res.status = 403;
-  } else if (login_data.success) {
-    // 登录成功，更新 is_online 为 1
-    std::string update_sql =
-        "UPDATE users SET is_online=1 WHERE account='" + account + "';";
-    rc = sqlite3_exec(db, update_sql.c_str(), nullptr, nullptr, &err_msg);
-
-    if (rc != SQLITE_OK) {
-      // 更新在线状态失败
-      std::cerr << "update_online_error: " << err_msg << std::endl;
-      sqlite3_free(err_msg);
-      response_json["status"] = "failure";
-      response_json["message"] =
-          "Login successful but failed to update online status";
-      res.status = 500;
-    } else {
-      // 成功
-      response_json["status"] = "success";
-      response_json["message"] = "Login successful";
-      response_json["is_admin"] = login_data.is_admin;
-      res.status = 200;
-    }
-  } else {
-    // 密码错误
+  } else if (now - login_data.last_login_attempt < 5) {
+    int wait_seconds = 5 - (now - login_data.last_login_attempt);
     response_json["status"] = "failure";
-    response_json["message"] = "Invalid credentials";
-    res.status = 401;
+    response_json["message"] = "Please wait before next login attempt";
+    response_json["wait_seconds"] = wait_seconds;
+    res.status = 429;
+  } else {
+    // 超过5秒，无论密码对错都要更新时间
+    std::string update_sql =
+        "UPDATE users SET last_login_attempt=" + std::to_string(now) +
+        ", last_login_time=" + std::to_string(now) + " WHERE account='" +
+        account + "';";
+    sqlite3_exec(db, update_sql.c_str(), nullptr, nullptr, nullptr);
+
+    if (login_data.db_password == password) {
+      // 登录成功，更新 is_online
+      std::string online_sql =
+          "UPDATE users SET is_online=1 WHERE account='" + account + "';";
+      rc = sqlite3_exec(db, online_sql.c_str(), nullptr, nullptr, &err_msg);
+
+      response_json["first_login"] = (login_data.last_login_time == 0);
+
+      if (rc != SQLITE_OK) {
+        std::cerr << "update_online_error: " << err_msg << std::endl;
+        sqlite3_free(err_msg);
+        response_json["status"] = "failure";
+        response_json["message"] =
+            "Login successful but failed to update online status";
+        res.status = 500;
+      } else {
+        response_json["status"] = "success";
+        response_json["message"] = "Login successful";
+        response_json["is_admin"] = login_data.is_admin;
+        res.status = 200;
+      }
+    } else {
+      // 密码错误
+      response_json["status"] = "failure";
+      response_json["message"] = "Invalid credentials";
+      res.status = 401;
+    }
   }
   res.set_content(response_json.dump(), "application/json");
 }
@@ -286,12 +135,13 @@ void handleLogout(const httplib::Request &req, httplib::Response &res) {
 }
 // GET /api/users/id - 获取用户信息
 void handleGetUserInfo(const httplib::Request &req, httplib::Response &res) {
-  // json:{""account":"xxx"}
+  // json:{"account":"xxx"}
   auto body = nlohmann::json::parse(req.body);
   std::string user_account = body["account"];
-  std::string sql = "SELECT account, username, bio, major, grade, is_admin, "
-                    "is_online FROM users WHERE account='" +
-                    user_account + "';";
+  std::string sql =
+      "SELECT account, username, bio, major, grade, role, is_admin, "
+      "is_online, last_login_time FROM users WHERE account='" +
+      user_account + "';";
   char *err_msg = nullptr;
   struct UserInfo {
     std::string account;
@@ -299,8 +149,10 @@ void handleGetUserInfo(const httplib::Request &req, httplib::Response &res) {
     std::string bio;
     std::string major;
     std::string grade;
+    std::string role;
     bool is_admin;
     bool is_online;
+    int last_login_time;
     bool found;
   };
   UserInfo user_info;
@@ -315,8 +167,10 @@ void handleGetUserInfo(const httplib::Request &req, httplib::Response &res) {
         user_info->bio = argv[2] ? argv[2] : "";
         user_info->major = argv[3] ? argv[3] : "";
         user_info->grade = argv[4] ? argv[4] : "";
-        user_info->is_admin = argv[5] ? std::string(argv[5]) == "1" : false;
-        user_info->is_online = argv[6] ? std::string(argv[6]) == "1" : false;
+        user_info->role = argv[5] ? argv[5] : "";
+        user_info->is_admin = argv[6] ? std::string(argv[6]) == "1" : false;
+        user_info->is_online = argv[7] ? std::string(argv[7]) == "1" : false;
+        user_info->last_login_time = argv[8] ? std::stoi(argv[8]) : 0;
         user_info->found = true;
         return 0;
       },
@@ -342,37 +196,43 @@ void handleGetUserInfo(const httplib::Request &req, httplib::Response &res) {
                              {"bio", user_info.bio},
                              {"major", user_info.major},
                              {"grade", user_info.grade},
+                             {"role", user_info.role},
                              {"is_admin", user_info.is_admin},
-                             {"is_online", user_info.is_online}};
+                             {"is_online", user_info.is_online},
+                             {"last_login_time", user_info.last_login_time}};
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// PUT /api/users/id - 修改用户名，个人简介，专业，年级信息
+// PUT /api/users/id - 修改用户名，个人简介，专业信息
 void handleUpdateUserInfo(const httplib::Request &req, httplib::Response &res) {
-  // json:{"account":"xxx","username":"xxx","bio":"xxx","major":"xxx","grade":"xxx"}
+  // json:{"account":"xxx","username":"xxx","bio":"xxx"}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
   std::string username = body["username"];
   std::string bio = body["bio"];
-  std::string major = body["major"];
-  std::string grade = body["grade"];
-  std::string sql = "UPDATE users SET username='" + username + "', bio='" +
-                    bio + "', major='" + major + "', grade='" + grade +
-                    "' WHERE account='" + account + "';";
-  char *err_msg = nullptr;
-  //更新用户信息
-  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
   nlohmann::json response_json;
+
+  if (username.empty()) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Username cannot be empty";
+    res.status = 400;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  std::string sql = "UPDATE users SET username='" + username + "', bio='" +
+                    bio + "' WHERE account='" + account + "';";
+  char *err_msg = nullptr;
+  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+
   if (rc != SQLITE_OK) {
-    //  SQL 执行错误
     std::cerr << "update_user_info_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to update user info";
     res.status = 500;
   } else {
-    // 成功更新用户信息
     response_json["status"] = "success";
     response_json["message"] = "User info updated successfully";
     res.status = 200;
@@ -444,19 +304,21 @@ void handleGetUserPosts(const httplib::Request &req, httplib::Response &res) {
   // json:{"account":"xxx"}
   auto body = nlohmann::json::parse(req.body);
   std::string user_account = body["account"];
-  std::string sql = "SELECT post_id, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, "
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts WHERE account='" +
-                    user_account +
-                    "' AND is_deleted=0 "
-                    "ORDER BY created_at DESC;";
+  std::string sql =
+      "SELECT p.post_id, p.title, SUBSTR(p.content, 1, 100) as summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.account='" +
+      user_account +
+      "' AND p.is_deleted=0 "
+      "ORDER BY p.created_at DESC;";
+
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
     std::string title;
-    std::string content;
     std::string summary;
     std::string grade;
     std::string major;
@@ -495,14 +357,12 @@ void handleGetUserPosts(const httplib::Request &req, httplib::Response &res) {
       &posts, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_user_posts_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve user posts";
     res.status = 500;
   } else {
-    // 成功获取用户帖子
     response_json["status"] = "success";
     nlohmann::json posts_json = nlohmann::json::array();
     for (const auto &post : posts) {
@@ -633,14 +493,16 @@ void handleGetUserFavorites(const httplib::Request &req,
   std::string sql =
       "SELECT p.post_id, p.account, p.title, "
       "SUBSTR(p.content, 1, 100) as summary, "
-      "p.grade, p.major, p.role, p.category, p.is_anonymous, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
       "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
       "FROM posts p "
       "JOIN user_favorites uf ON p.post_id = uf.post_id "
+      "LEFT JOIN users u ON p.account = u.account "
       "WHERE uf.account='" +
       user_account +
       "' AND p.is_deleted=0 "
       "ORDER BY uf.created_at DESC;";
+
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
@@ -685,14 +547,12 @@ void handleGetUserFavorites(const httplib::Request &req,
       &favorites, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_user_favorites_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve user favorites";
     res.status = 500;
   } else {
-    // 成功获取用户收藏帖子
     response_json["status"] = "success";
     nlohmann::json favorites_json = nlohmann::json::array();
     for (const auto &post : favorites) {
@@ -726,14 +586,16 @@ void handleGetUserLikes(const httplib::Request &req, httplib::Response &res) {
   std::string sql =
       "SELECT p.post_id, p.account, p.title, "
       "SUBSTR(p.content, 1, 100) as summary, "
-      "p.grade, p.major, p.role, p.category, p.is_anonymous, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
       "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
       "FROM posts p "
       "JOIN user_likes ul ON p.post_id = ul.post_id "
+      "LEFT JOIN users u ON p.account = u.account "
       "WHERE ul.account='" +
       user_account +
       "' AND p.is_deleted=0 "
       "ORDER BY ul.created_at DESC;";
+
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
@@ -811,7 +673,8 @@ void handleGetUserLikes(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// GET /api/notifications - 获取用户的通知列表
+// 1111
+//  GET /api/notifications - 获取用户的通知列表
 void handleGetNotifications(const httplib::Request &req,
                             httplib::Response &res) {
   // json:{"account":"xxx"}
@@ -966,6 +829,75 @@ void handleGetUnreadCount(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
+// 1111
+//  GET /api/users/id/comment-likes - 获取用户点赞的评论
+void handleGetUserCommentLikes(const httplib::Request &req,
+                               httplib::Response &res) {
+  // json:{"account":"xxx"}
+  auto body = nlohmann::json::parse(req.body);
+  std::string user_account = body["account"];
+  std::string sql = "SELECT c.comment_id, c.post_id, c.account, c.content, "
+                    "COALESCE(c.parent_id, 0) as parent_id, "
+                    "c.like_count, c.created_at "
+                    "FROM comments c "
+                    "JOIN comment_likes cl ON c.comment_id = cl.comment_id "
+                    "WHERE cl.account='" +
+                    user_account +
+                    "' AND c.is_deleted=0 "
+                    "ORDER BY cl.created_at DESC;";
+
+  char *err_msg = nullptr;
+  struct CommentInfo {
+    int comment_id;
+    int post_id;
+    std::string account;
+    std::string content;
+    int parent_id;
+    int like_count;
+    std::string created_at;
+  };
+  std::vector<CommentInfo> liked_comments;
+  int rc = sqlite3_exec(
+      db, sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        auto *liked_comments = static_cast<std::vector<CommentInfo> *>(data);
+        CommentInfo comment;
+        comment.comment_id = argv[0] ? std::stoi(argv[0]) : 0;
+        comment.post_id = argv[1] ? std::stoi(argv[1]) : 0;
+        comment.account = argv[2] ? argv[2] : "";
+        comment.content = argv[3] ? argv[3] : "";
+        comment.parent_id = argv[4] ? std::stoi(argv[4]) : 0;
+        comment.like_count = argv[5] ? std::stoi(argv[5]) : 0;
+        comment.created_at = argv[6] ? argv[6] : "";
+        liked_comments->push_back(comment);
+        return 0;
+      },
+      &liked_comments, &err_msg);
+
+  nlohmann::json response_json;
+  if (rc != SQLITE_OK) {
+    std::cerr << "get_user_comment_likes_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve liked comments";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    nlohmann::json comments_json = nlohmann::json::array();
+    for (const auto &comment : liked_comments) {
+      comments_json.push_back({{"comment_id", comment.comment_id},
+                               {"post_id", comment.post_id},
+                               {"account", comment.account},
+                               {"content", comment.content},
+                               {"parent_id", comment.parent_id},
+                               {"like_count", comment.like_count},
+                               {"created_at", comment.created_at}});
+    }
+    response_json["data"] = comments_json;
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
 // POST /api/users/search - 搜索用户
 void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
   // json:{"keyword":"abc","page":1,"page_size":10}
@@ -984,14 +916,14 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
     return;
   }
 
-  std::string sql = "SELECT account, username, bio, major, grade, is_admin, "
-                    "is_online, is_banned "
-                    "FROM users WHERE account LIKE '%" +
-                    keyword + "%' OR username LIKE '%" + keyword +
-                    "%' "
-                    "ORDER BY account ASC LIMIT " +
-                    std::to_string(page_size) + " OFFSET " +
-                    std::to_string(offset) + ";";
+  std::string sql =
+      "SELECT account, username, bio, major, grade, role, is_admin, "
+      "is_online, is_banned "
+      "FROM users WHERE account LIKE '%" +
+      keyword + "%' OR username LIKE '%" + keyword +
+      "%' "
+      "ORDER BY account ASC LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
   char *err_msg = nullptr;
   struct UserInfo {
     std::string account;
@@ -999,6 +931,7 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
     std::string bio;
     std::string major;
     std::string grade;
+    std::string role;
     bool is_admin;
     bool is_online;
     bool is_banned;
@@ -1014,9 +947,10 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
         user.bio = argv[2] ? argv[2] : "";
         user.major = argv[3] ? argv[3] : "";
         user.grade = argv[4] ? argv[4] : "";
-        user.is_admin = argv[5] ? std::string(argv[5]) == "1" : false;
-        user.is_online = argv[6] ? std::string(argv[6]) == "1" : false;
-        user.is_banned = argv[7] ? std::string(argv[7]) == "1" : false;
+        user.role = argv[5] ? argv[5] : "";
+        user.is_admin = argv[6] ? std::string(argv[6]) == "1" : false;
+        user.is_online = argv[7] ? std::string(argv[7]) == "1" : false;
+        user.is_banned = argv[8] ? std::string(argv[8]) == "1" : false;
         users->push_back(user);
         return 0;
       },
@@ -1037,6 +971,7 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
                             {"bio", user.bio},
                             {"major", user.major},
                             {"grade", user.grade},
+                            {"role", user.role},
                             {"is_admin", user.is_admin},
                             {"is_online", user.is_online},
                             {"is_banned", user.is_banned}});
@@ -1052,7 +987,7 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
 }
 } // namespace UserAPI
 namespace PostAPI {
-// GET /api/posts - 获取帖子列表
+// GET /api/posts - 获取帖子列表，置顶优先，其次时间降序，支持分页和筛选
 void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
   // json:{"page":1,"page_size":10,"major":"xxx","grade":"xxx","role":"xxx","category":"xxx"}
   auto body = nlohmann::json::parse(req.body);
@@ -1063,20 +998,25 @@ void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
   std::string grade = body.value("grade", "");
   std::string role = body.value("role", "");
   std::string category = body.value("category", "");
-  std::string sql = "SELECT post_id, account, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, "
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts WHERE is_deleted=0";
+
+  std::string sql =
+      "SELECT p.post_id, p.account, p.title, SUBSTR(p.content, 1, 100) as "
+      "summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.is_deleted=0";
+
   if (!major.empty())
-    sql += " AND major='" + major + "'";
+    sql += " AND u.major='" + major + "'";
   if (!grade.empty())
-    sql += " AND grade='" + grade + "'";
+    sql += " AND u.grade='" + grade + "'";
   if (!role.empty())
-    sql += " AND role='" + role + "'";
+    sql += " AND u.role='" + role + "'";
   if (!category.empty())
-    sql += " AND category='" + category + "'";
-  sql += " ORDER BY is_top DESC, created_at DESC LIMIT " +
+    sql += " AND p.category='" + category + "'";
+  sql += " ORDER BY p.is_top DESC, p.created_at DESC LIMIT " +
          std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
@@ -1125,14 +1065,12 @@ void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
 
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_posts_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve posts";
     res.status = 500;
   } else {
-    // 成功获取帖子列表
     response_json["status"] = "success";
     nlohmann::json posts_json = nlohmann::json::array();
     for (const auto &post : posts) {
@@ -1188,12 +1126,14 @@ void handleGetPostDetail(const httplib::Request &req, httplib::Response &res) {
     res.set_content(response_json.dump(), "application/json");
     return;
   }
-  std::string sql =
-      "SELECT post_id, account, title, content, grade, major, role, category, "
-      "is_anonymous, "
-      "view_count, like_count, is_top, comment_count, created_at, updated_at "
-      "FROM posts WHERE post_id=" +
-      std::to_string(post_id) + " AND is_deleted=0;";
+  std::string sql = "SELECT p.post_id, p.account, p.title, p.content, "
+                    "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+                    "p.view_count, p.like_count, p.is_top, p.comment_count, "
+                    "p.created_at, p.updated_at "
+                    "FROM posts p "
+                    "LEFT JOIN users u ON p.account = u.account "
+                    "WHERE p.post_id=" +
+                    std::to_string(post_id) + " AND p.is_deleted=0;";
   struct PostInfo {
     int post_id;
     std::string account;
@@ -1241,19 +1181,16 @@ void handleGetPostDetail(const httplib::Request &req, httplib::Response &res) {
       &post_data_pair, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_post_detail_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve post details";
     res.status = 500;
   } else if (!post_found) {
-    // 帖子未找到
     response_json["status"] = "failure";
     response_json["message"] = "Post not found";
     res.status = 404;
   } else {
-    // 成功获取帖子详情
     std::string display_account = post.is_anonymous ? "匿名用户" : post.account;
     response_json["status"] = "success";
     response_json["data"] = {{"post_id", post.post_id},
@@ -1277,24 +1214,18 @@ void handleGetPostDetail(const httplib::Request &req, httplib::Response &res) {
 }
 // POST /api/posts - 创建新帖子
 void handleCreatePost(const httplib::Request &req, httplib::Response &res) {
-  // json:{"account":"xxx","title":"xxx","content":"xxx","grade":"xxx","major":"xxx","role":"xxx","category":"xxx","is_anonymous":"xxx"}
+  // json:{"account":"xxx","title":"xxx","content":"xxx","category":"xxx","is_anonymous":0}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
   std::string title = body["title"];
   std::string content = body["content"];
-  std::string grade = body.value("grade", "");
-  std::string major = body.value("major", "");
-  std::string role = body.value("role", "");
   std::string category = body.value("category", "");
   int is_anonymous = body.value("is_anonymous", 0);
   std::string sql =
-      "INSERT INTO posts (account, title, content, grade, major, role, "
-      "category, is_anonymous, view_count, like_count, is_top, comment_count, "
-      "is_deleted, created_at, updated_at) VALUES ('" +
+      "INSERT INTO posts (account, title, content, category, is_anonymous, "
+      "view_count, like_count, is_top, comment_count, is_deleted, created_at, "
+      "updated_at) VALUES ('" +
       account + "', '" + title + "', '" + content + "', " +
-      (grade.empty() ? "NULL" : ("'" + grade + "'")) + ", " +
-      (major.empty() ? "NULL" : ("'" + major + "'")) + ", " +
-      (role.empty() ? "NULL" : ("'" + role + "'")) + ", " +
       (category.empty() ? "NULL" : ("'" + category + "'")) + ", " +
       std::to_string(is_anonymous) +
       ", 0, 0, 0, 0, 0, datetime('now'), datetime('now'));";
@@ -1303,14 +1234,12 @@ void handleCreatePost(const httplib::Request &req, httplib::Response &res) {
   int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "create_post_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to create post";
     res.status = 500;
   } else {
-    // 成功创建新帖子
     response_json["status"] = "success";
     response_json["message"] = "Post created successfully";
     res.status = 201;
@@ -1374,15 +1303,18 @@ void handleDeletePost(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// GET /api/posts/hot - 获取热门帖子
+//  GET /api/posts/hot - 获取热门帖子
 void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
-  std::string sql = "SELECT post_id, account, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, " // 新增
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts WHERE is_deleted=0 "
-                    "ORDER BY view_count DESC, like_count DESC "
-                    "LIMIT 10;";
+  std::string sql =
+      "SELECT p.post_id, p.account, p.title, "
+      "SUBSTR(p.content, 1, 100) as summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.is_deleted=0 "
+      "ORDER BY p.view_count DESC, p.like_count DESC "
+      "LIMIT 10;";
 
   char *err_msg = nullptr;
   struct PostInfo {
@@ -1430,28 +1362,26 @@ void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
 
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_hot_posts_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve hot posts";
     res.status = 500;
   } else {
-    // 成功获取热门帖子
     response_json["status"] = "success";
     nlohmann::json posts_json = nlohmann::json::array();
     for (const auto &post : posts) {
       std::string display_account =
           post.is_anonymous ? "匿名用户" : post.account;
       posts_json.push_back({{"post_id", post.post_id},
-                            {"account", display_account}, // 匿名处理
+                            {"account", display_account},
                             {"title", post.title},
                             {"summary", post.summary},
-                            {"grade", post.grade},               // 新增
-                            {"major", post.major},               // 新增
-                            {"role", post.role},                 // 新增
-                            {"category", post.category},         // 新增
-                            {"is_anonymous", post.is_anonymous}, // 新增
+                            {"grade", post.grade},
+                            {"major", post.major},
+                            {"role", post.role},
+                            {"category", post.category},
+                            {"is_anonymous", post.is_anonymous},
                             {"view_count", post.view_count},
                             {"like_count", post.like_count},
                             {"is_top", post.is_top},
@@ -1465,12 +1395,16 @@ void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
 }
 // GET /api/posts/pinned - 获取置顶帖子
 void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
-  std::string sql = "SELECT post_id, account, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, " // 新增
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts WHERE is_deleted=0 AND is_top=1 "
-                    "ORDER BY created_at DESC;";
+  std::string sql =
+      "SELECT p.post_id, p.account, p.title, SUBSTR(p.content, 1, 100) as "
+      "summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.is_deleted=0 AND p.is_top=1 "
+      "ORDER BY p.created_at DESC;";
+
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
@@ -1515,14 +1449,12 @@ void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
       &posts, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "get_pinned_posts_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
     response_json["message"] = "Failed to retrieve pinned posts";
     res.status = 500;
   } else {
-    // 成功获取置顶帖子
     response_json["status"] = "success";
     nlohmann::json posts_json = nlohmann::json::array();
     for (const auto &post : posts) {
@@ -1548,7 +1480,7 @@ void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// POST /api/posts/id/like - 点赞/取消点赞
+//  POST /api/posts/id/like - 点赞/取消点赞
 void handleToggleLike(const httplib::Request &req, httplib::Response &res) {
   // json:{"account":"xxx","post_id":xxx}
   auto body = nlohmann::json::parse(req.body);
@@ -1700,14 +1632,13 @@ void handleToggleFavorite(const httplib::Request &req, httplib::Response &res) {
 }
 // GET /api/posts/search?q=关键词 - 搜索帖子
 void handleSearchPosts(const httplib::Request &req, httplib::Response &res) {
-  // json:{"q":"关键词","page":1,"page_size":10}
+  // GET /api/posts/search?q=关键词&page=1&page_size=10
   std::string keyword = req.get_param_value("q");
   int page = req.has_param("page") ? std::stoi(req.get_param_value("page")) : 1;
   int page_size = req.has_param("page_size")
                       ? std::stoi(req.get_param_value("page_size"))
                       : 10;
   int offset = (page - 1) * page_size;
-  // 处理空关键词
   nlohmann::json response_json;
   if (keyword.empty()) {
     response_json["status"] = "failure";
@@ -1716,24 +1647,24 @@ void handleSearchPosts(const httplib::Request &req, httplib::Response &res) {
     res.set_content(response_json.dump(), "application/json");
     return;
   }
-  // 构建搜索 SQL 查询，使用LIKE进行模糊匹配，忽略大小写
-  std::string sql = "SELECT post_id, account, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, "
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts "
-                    "WHERE is_deleted=0 AND ("
-                    "title LIKE '%" +
-                    keyword +
-                    "%' COLLATE NOCASE OR "
-                    "content LIKE '%" +
-                    keyword +
-                    "%' COLLATE NOCASE"
-                    ") "
-                    "ORDER BY is_top DESC, created_at DESC "
-                    "LIMIT " +
-                    std::to_string(page_size) + " OFFSET " +
-                    std::to_string(offset) + ";";
+  std::string sql =
+      "SELECT p.post_id, p.account, p.title, SUBSTR(p.content, 1, 100) as "
+      "summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.is_deleted=0 AND ("
+      "p.title LIKE '%" +
+      keyword +
+      "%' COLLATE NOCASE OR "
+      "p.content LIKE '%" +
+      keyword +
+      "%' COLLATE NOCASE"
+      ") "
+      "ORDER BY p.is_top DESC, p.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
@@ -1752,7 +1683,6 @@ void handleSearchPosts(const httplib::Request &req, httplib::Response &res) {
     std::string created_at;
   };
   std::vector<PostInfo> posts;
-  // 执行搜索
   int rc = sqlite3_exec(
       db, sql.c_str(),
       [](void *data, int argc, char **argv, char **azColName) -> int {
@@ -2093,7 +2023,7 @@ void handleToggleCommentLike(const httplib::Request &req,
   int comment_id = body["comment_id"];
   //检查用户是否已点赞该评论
   std::string check_sql =
-      "SELECT COUNT(*) FROM user_comment_likes WHERE account='" + account +
+      "SELECT COUNT(*) FROM comment_likes WHERE account='" + account +
       "' AND comment_id=" + std::to_string(comment_id) + ";";
   char *err_msg = nullptr;
   int like_count = 0;
@@ -2107,7 +2037,6 @@ void handleToggleCommentLike(const httplib::Request &req,
       &like_count, &err_msg);
   nlohmann::json response_json;
   if (rc != SQLITE_OK) {
-    // SQL 执行错误
     std::cerr << "toggle_comment_like_check_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
@@ -2119,21 +2048,19 @@ void handleToggleCommentLike(const httplib::Request &req,
   if (like_count > 0) {
     // 用户已点赞，执行取消点赞
     std::string delete_sql =
-        "DELETE FROM user_comment_likes WHERE account='" + account +
+        "DELETE FROM comment_likes WHERE account='" + account +
         "' AND comment_id=" + std::to_string(comment_id) +
         ";"
         "UPDATE comments SET like_count=like_count-1 WHERE comment_id=" +
         std::to_string(comment_id) + ";";
     rc = sqlite3_exec(db, delete_sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
-      // SQL 执行错误
       std::cerr << "toggle_comment_like_unlike_error: " << err_msg << std::endl;
       sqlite3_free(err_msg);
       response_json["status"] = "failure";
       response_json["message"] = "Failed to unlike comment";
       res.status = 500;
     } else {
-      // 成功取消点赞
       response_json["status"] = "success";
       response_json["message"] = "Comment unliked successfully";
       res.status = 200;
@@ -2141,21 +2068,19 @@ void handleToggleCommentLike(const httplib::Request &req,
   } else {
     // 用户未点赞，执行点赞
     std::string insert_sql =
-        "INSERT INTO user_comment_likes (account, comment_id) VALUES ('" +
-        account + "', " + std::to_string(comment_id) +
+        "INSERT INTO comment_likes (account, comment_id) VALUES ('" + account +
+        "', " + std::to_string(comment_id) +
         ");"
         "UPDATE comments SET like_count=like_count+1 WHERE comment_id=" +
         std::to_string(comment_id) + ";";
     rc = sqlite3_exec(db, insert_sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
-      // SQL 执行错误
       std::cerr << "toggle_comment_like_like_error: " << err_msg << std::endl;
       sqlite3_free(err_msg);
       response_json["status"] = "failure";
       response_json["message"] = "Failed to like comment";
       res.status = 500;
     } else {
-      // 成功点赞
       response_json["status"] = "success";
       response_json["message"] = "Comment liked successfully";
       res.status = 200;
@@ -2187,33 +2112,40 @@ void handleAdminLogin(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// POST /api/admin/logout - 超级管理员登出
-void handleAdminLogout(const httplib::Request &req, httplib::Response &res) {
-  nlohmann::json response_json;
-  response_json["status"] = "success";
-  response_json["message"] = "Admin logout successful";
-  res.status = 200;
-  res.set_content(response_json.dump(), "application/json");
-}
 // POST /api/admin/users - 创建新用户
 void handleCreateUser(const httplib::Request &req, httplib::Response &res) {
-  // json:{"account":"xxx","username":"xxx","password":"xxx","major":"xxx","grade":"xxx","is_admin":0}
+  // json:{"account":"xxx","username":"xxx","password":"xxx","major":"xxx","grade":"xxx","role":"xxx","is_admin":0}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
   std::string username = body["username"];
   std::string password = body["password"];
+  std::string role = body.value("role", "student"); // 默认学生
   std::string major = body.value("major", "");
   std::string grade = body.value("grade", "");
   int is_admin = body.value("is_admin", 0);
+  nlohmann::json response_json;
+  // 判断师生身份
+  if (role == "teacher") {
+    major = "";
+    grade = "";
+  } else if (role == "student") {
+    if (major.empty() || grade.empty()) {
+      response_json["status"] = "failure";
+      response_json["message"] = "学生必须填写年级和专业";
+      res.status = 400;
+      res.set_content(response_json.dump(), "application/json");
+      return;
+    }
+  }
   std::string sql = "INSERT INTO users (account, username, password, major, "
-                    "grade, is_admin, is_online, is_banned) VALUES ('" +
+                    "grade, role, is_admin, is_online, is_banned) VALUES ('" +
                     account + "', '" + username + "', '" + password + "', " +
                     (major.empty() ? "NULL" : ("'" + major + "'")) + ", " +
                     (grade.empty() ? "NULL" : ("'" + grade + "'")) + ", " +
-                    std::to_string(is_admin) + ", 0, 0);";
+                    "'" + role + "', " + std::to_string(is_admin) + ", 0, 0);";
   char *err_msg = nullptr;
   int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
-  nlohmann::json response_json;
+
   if (rc != SQLITE_OK) {
     std::cerr << "create_user_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
@@ -2229,12 +2161,13 @@ void handleCreateUser(const httplib::Request &req, httplib::Response &res) {
 }
 // PUT /api/admin/users/id - 修改用户是否为管理员
 void handleUpdateUser(const httplib::Request &req, httplib::Response &res) {
-  // json:{"account":"xxx"}
+  // json:{"account":"xxx","is_admin":1}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
+  int is_admin = body.value("is_admin", 1); // 默认为1，支持0取消
 
-  std::string sql =
-      "UPDATE users SET is_admin=1 WHERE account='" + account + "';";
+  std::string sql = "UPDATE users SET is_admin=" + std::to_string(is_admin) +
+                    " WHERE account='" + account + "';";
   char *err_msg = nullptr;
   int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
@@ -2243,11 +2176,12 @@ void handleUpdateUser(const httplib::Request &req, httplib::Response &res) {
     std::cerr << "update_user_admin_error: " << err_msg << std::endl;
     sqlite3_free(err_msg);
     response_json["status"] = "failure";
-    response_json["message"] = "Failed to set user as admin";
+    response_json["message"] = "Failed to update admin status";
     res.status = 500;
   } else {
     response_json["status"] = "success";
-    response_json["message"] = "User set as admin successfully";
+    response_json["message"] = is_admin ? "User set as admin successfully"
+                                        : "User unset as admin successfully";
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -2257,10 +2191,11 @@ void handleGetUser(const httplib::Request &req, httplib::Response &res) {
   // json:{"account":"xxx"}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
-  std::string sql = "SELECT account, username, password, bio, major, grade, "
-                    "is_admin, is_online, is_banned "
-                    "FROM users WHERE account='" +
-                    account + "';";
+  std::string sql =
+      "SELECT account, username, password, bio, major, grade, role, "
+      "is_admin, is_online, is_banned, last_login_attempt, last_login_time "
+      "FROM users WHERE account='" +
+      account + "';";
   char *err_msg = nullptr;
   struct UserInfo {
     std::string account;
@@ -2269,9 +2204,12 @@ void handleGetUser(const httplib::Request &req, httplib::Response &res) {
     std::string bio;
     std::string major;
     std::string grade;
+    std::string role;
     bool is_admin;
     bool is_online;
     bool is_banned;
+    int last_login_attempt;
+    int last_login_time;
     bool found;
   };
   UserInfo user_info;
@@ -2287,9 +2225,12 @@ void handleGetUser(const httplib::Request &req, httplib::Response &res) {
         user_info->bio = argv[3] ? argv[3] : "";
         user_info->major = argv[4] ? argv[4] : "";
         user_info->grade = argv[5] ? argv[5] : "";
-        user_info->is_admin = argv[6] ? std::string(argv[6]) == "1" : false;
-        user_info->is_online = argv[7] ? std::string(argv[7]) == "1" : false;
-        user_info->is_banned = argv[8] ? std::string(argv[8]) == "1" : false;
+        user_info->role = argv[6] ? argv[6] : "";
+        user_info->is_admin = argv[7] ? std::string(argv[7]) == "1" : false;
+        user_info->is_online = argv[8] ? std::string(argv[8]) == "1" : false;
+        user_info->is_banned = argv[9] ? std::string(argv[9]) == "1" : false;
+        user_info->last_login_attempt = argv[10] ? std::stoi(argv[10]) : 0;
+        user_info->last_login_time = argv[11] ? std::stoi(argv[11]) : 0;
         user_info->found = true;
         return 0;
       },
@@ -2308,11 +2249,18 @@ void handleGetUser(const httplib::Request &req, httplib::Response &res) {
   } else {
     response_json["status"] = "success";
     response_json["data"] = {
-        {"account", user_info.account},    {"username", user_info.username},
-        {"password", user_info.password},  {"bio", user_info.bio},
-        {"major", user_info.major},        {"grade", user_info.grade},
-        {"is_admin", user_info.is_admin},  {"is_online", user_info.is_online},
-        {"is_banned", user_info.is_banned}};
+        {"account", user_info.account},
+        {"username", user_info.username},
+        {"password", user_info.password},
+        {"bio", user_info.bio},
+        {"major", user_info.major},
+        {"grade", user_info.grade},
+        {"role", user_info.role},
+        {"is_admin", user_info.is_admin},
+        {"is_online", user_info.is_online},
+        {"is_banned", user_info.is_banned},
+        {"last_login_attempt", user_info.last_login_attempt},
+        {"last_login_time", user_info.last_login_time}};
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -2374,12 +2322,12 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
   int page_size = body.value("page_size", 10);
   int offset = (page - 1) * page_size;
 
-  std::string sql = "SELECT account, username, bio, major, grade, is_admin, "
-                    "is_online, is_banned "
-                    "FROM users ORDER BY account ASC "
-                    "LIMIT " +
-                    std::to_string(page_size) + " OFFSET " +
-                    std::to_string(offset) + ";";
+  std::string sql =
+      "SELECT account, username, bio, major, grade, role, is_admin, "
+      "is_online, is_banned, last_login_attempt, last_login_time "
+      "FROM users ORDER BY account ASC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
   char *err_msg = nullptr;
   struct UserInfo {
     std::string account;
@@ -2387,9 +2335,12 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
     std::string bio;
     std::string major;
     std::string grade;
+    std::string role;
     bool is_admin;
     bool is_online;
     bool is_banned;
+    int last_login_attempt;
+    int last_login_time;
   };
   std::vector<UserInfo> users;
   // 获取用户列表
@@ -2403,9 +2354,12 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
         user.bio = argv[2] ? argv[2] : "";
         user.major = argv[3] ? argv[3] : "";
         user.grade = argv[4] ? argv[4] : "";
-        user.is_admin = argv[5] ? std::string(argv[5]) == "1" : false;
-        user.is_online = argv[6] ? std::string(argv[6]) == "1" : false;
-        user.is_banned = argv[7] ? std::string(argv[7]) == "1" : false;
+        user.role = argv[5] ? argv[5] : "";
+        user.is_admin = argv[6] ? std::string(argv[6]) == "1" : false;
+        user.is_online = argv[7] ? std::string(argv[7]) == "1" : false;
+        user.is_banned = argv[8] ? std::string(argv[8]) == "1" : false;
+        user.last_login_attempt = argv[9] ? std::stoi(argv[9]) : 0;
+        user.last_login_time = argv[10] ? std::stoi(argv[10]) : 0;
         users->push_back(user);
         return 0;
       },
@@ -2427,9 +2381,12 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
                             {"bio", user.bio},
                             {"major", user.major},
                             {"grade", user.grade},
+                            {"role", user.role},
                             {"is_admin", user.is_admin},
                             {"is_online", user.is_online},
-                            {"is_banned", user.is_banned}});
+                            {"is_banned", user.is_banned},
+                            {"last_login_attempt", user.last_login_attempt},
+                            {"last_login_time", user.last_login_time}});
     }
     response_json["data"] = users_json;
     response_json["page"] = page;
@@ -2531,7 +2488,7 @@ void handleForceDeleteComment(const httplib::Request &req,
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// PUT /api/admin/posts/id/pin - 置顶/取消置顶帖子
+//  PUT /api/admin/posts/id/pin - 置顶/取消置顶帖子
 void handleTogglePinPost(const httplib::Request &req, httplib::Response &res) {
   // json:{"post_id":xxx}
   auto body = nlohmann::json::parse(req.body);
@@ -2582,7 +2539,7 @@ void handleTogglePinPost(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// GET /api/admin/stats - 获取平台统计数据，多少用户，多少帖子，多少评论
+//  GET /api/admin/stats - 获取平台统计数据，多少用户，多少帖子，多少评论
 void handleGetStats(const httplib::Request &req, httplib::Response &res) {
   char *err_msg = nullptr;
   int user_count = 0, post_count = 0, comment_count = 0;
@@ -2640,7 +2597,6 @@ void handleGetStats(const httplib::Request &req, httplib::Response &res) {
 // GET /api/admin/posts/deleted - 查看所有软删除的帖子
 void handleGetDeletedPosts(const httplib::Request &req,
                            httplib::Response &res) {
-  // json:{"page":1,"page_size":10}
   int page = 1, page_size = 10;
   if (!req.body.empty()) {
     auto body = nlohmann::json::parse(req.body);
@@ -2649,15 +2605,19 @@ void handleGetDeletedPosts(const httplib::Request &req,
   }
   int offset = (page - 1) * page_size;
 
-  std::string sql = "SELECT post_id, account, title, "
-                    "SUBSTR(content, 1, 100) as summary, "
-                    "grade, major, role, category, is_anonymous, "
-                    "view_count, like_count, is_top, comment_count, created_at "
-                    "FROM posts WHERE is_deleted=1 "
-                    "ORDER BY created_at DESC "
-                    "LIMIT " +
-                    std::to_string(page_size) + " OFFSET " +
-                    std::to_string(offset) + ";";
+  // 通过 JOIN 查询发帖人的身份信息
+  std::string sql =
+      "SELECT p.post_id, p.account, p.title, SUBSTR(p.content, 1, 100) as "
+      "summary, "
+      "u.grade, u.major, u.role, p.category, p.is_anonymous, "
+      "p.view_count, p.like_count, p.is_top, p.comment_count, p.created_at "
+      "FROM posts p "
+      "LEFT JOIN users u ON p.account = u.account "
+      "WHERE p.is_deleted=1 "
+      "ORDER BY p.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
+
   char *err_msg = nullptr;
   struct PostInfo {
     int post_id;
@@ -2811,6 +2771,81 @@ void handleGetDeletedComments(const httplib::Request &req,
   }
   res.set_content(response_json.dump(), "application/json");
 }
+// PUT /api/admin/comments/id/recover - 恢复软删除评论
+void handleRecoverComment(const httplib::Request &req, httplib::Response &res) {
+  // json:{"comment_id":xxx}
+  auto body = nlohmann::json::parse(req.body);
+  int comment_id = body["comment_id"];
+  std::string sql = "UPDATE comments SET is_deleted=0 WHERE comment_id=" +
+                    std::to_string(comment_id) + ";";
+  char *err_msg = nullptr;
+  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+
+  nlohmann::json response_json;
+  if (rc != SQLITE_OK) {
+    std::cerr << "recover_comment_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to recover comment";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["message"] = "Comment recovered successfully";
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
+// PUT /api/admin/posts/id/recover - 恢复软删除帖子
+void handleRecoverPost(const httplib::Request &req, httplib::Response &res) {
+  // json:{"post_id":xxx}
+  auto body = nlohmann::json::parse(req.body);
+  int post_id = body["post_id"];
+  std::string sql =
+      "UPDATE posts SET is_deleted=0 WHERE post_id=" + std::to_string(post_id) +
+      ";";
+  char *err_msg = nullptr;
+  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+
+  nlohmann::json response_json;
+  if (rc != SQLITE_OK) {
+    std::cerr << "recover_post_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to recover post";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["message"] = "Post recovered successfully";
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
+// PUT /api/admin/users/id/info - 管理员修改用户年级和专业
+void handleUpdateUserMajorGrade(const httplib::Request &req,
+                                httplib::Response &res) {
+  // json:{"account":"xxx","major":"xxx","grade":"xxx"}
+  auto body = nlohmann::json::parse(req.body);
+  std::string account = body["account"];
+  std::string major = body.value("major", "");
+  std::string grade = body.value("grade", "");
+  std::string sql = "UPDATE users SET major='" + major + "', grade='" + grade +
+                    "' WHERE account='" + account + "';";
+  char *err_msg = nullptr;
+  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+  nlohmann::json response_json;
+  if (rc != SQLITE_OK) {
+    std::cerr << "update_user_major_grade_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to update major and grade";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["message"] = "Major and grade updated successfully";
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
 } // namespace AdminAPI
 int main() {
   // 初始化数据库
@@ -2819,17 +2854,7 @@ int main() {
     std::cerr << "Can't open database: " << sqlite3_errmsg(db) << std::endl;
     return 1;
   }
-  // 创建所有表
-  sql::createuser();
-  sql::createpost();
-  sql::createcomment();
-  sql::createlike();
-  sql::createfavorite();
-  sql::createcommentlike();
-  sql::createnotification();
-
   httplib::Server svr;
-
   // 用户接口
   svr.Post("/api/auth/login", UserAPI::handleLogin);
   svr.Post("/api/auth/logout", UserAPI::handleLogout);
@@ -2842,6 +2867,7 @@ int main() {
   svr.Get("/api/users/id/comments", UserAPI::handleGetUserComments);
   svr.Get("/api/users/id/favorites", UserAPI::handleGetUserFavorites);
   svr.Get("/api/users/id/likes", UserAPI::handleGetUserLikes);
+  svr.Get("/api/users/id/comment-likes", UserAPI::handleGetUserCommentLikes);
 
   // 帖子接口
   svr.Post("/api/posts", PostAPI::handleCreatePost);
@@ -2871,7 +2897,6 @@ int main() {
 
   // 管理员接口
   svr.Post("/api/admin/login", AdminAPI::handleAdminLogin);
-  svr.Post("/api/admin/logout", AdminAPI::handleAdminLogout);
   svr.Post("/api/admin/users", AdminAPI::handleCreateUser);
   svr.Put("/api/admin/users/id", AdminAPI::handleUpdateUser);
   svr.Get("/api/admin/users/id", AdminAPI::handleGetUser);
@@ -2884,13 +2909,12 @@ int main() {
   svr.Put("/api/admin/posts/id/pin", AdminAPI::handleTogglePinPost);
   svr.Get("/api/admin/posts/deleted", AdminAPI::handleGetDeletedPosts);
   svr.Get("/api/admin/comments/deleted", AdminAPI::handleGetDeletedComments);
+  svr.Put("/api/admin/users/id/info", AdminAPI::handleUpdateUserMajorGrade);
+  svr.Get("/api/admin/stats", AdminAPI::handleGetStats);
+  svr.Put("/api/admin/comments/id/recover", AdminAPI::handleRecoverComment);
+  svr.Put("/api/admin/posts/id/recover", AdminAPI::handleRecoverPost);
 
-  // 主页测试
-  svr.Get("/", [](const httplib::Request &, httplib::Response &res) {
-    res.set_content("Hello, World!", "text/plain");
-  });
-
-  std::cout << "Server started at http://0.0.0.0:8080" << std::endl;
+  std::cout << "Server started at http://127.0.0.1:8080" << std::endl;
   svr.listen("0.0.0.0", 8080);
 
   sqlite3_close(db);
