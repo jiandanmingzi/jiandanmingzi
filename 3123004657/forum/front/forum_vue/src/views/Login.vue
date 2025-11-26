@@ -1,23 +1,52 @@
 <script setup>
+import { dataType } from 'element-plus/es/components/table-v2/src/common';
 import { ref, reactive, getCurrentInstance, onMounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 const {proxy} = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const opType = ref();
+
+//初始化表单数据
+const formData = ref({});
+const formDataRef = ref();
+
+//表单弹窗配置
+const dialogConfig = reactive({
+    show:false,
+    title:"标题",
+});
+
+//设置表单标题
+const setFormTitle = (type) => {
+    if (type == 1) {
+        dialogConfig.title = "用户登录";
+    } else {
+        dialogConfig.title = "重置密码";
+    }
+}
+//重置表单
+const resetForm = () =>{
+    if (!formDataRef.value) {
+        return;
+    }
+    nextTick(() => {
+        formDataRef.value.resetFields();
+    });
+}
+
+//显示表单面板,type:1-登录,0-重置密码
 const showPanel = (type) => {
-    opType.value = type;
     resetForm();
-    
+    opType.value = type;
+    setFormTitle(type);
+    dialogConfig.show = true;
 };
 defineExpose({
     showPanel
 });
-const api = {
-    
-}
-const formData = ref({});
-const formDataRef = ref();
+
+//校验确认密码
 const checkRePassword = (rule, value, callback) => {
     if (value !== formData.value.newPassword) {
         callback(new Error(rule.message));
@@ -25,6 +54,8 @@ const checkRePassword = (rule, value, callback) => {
         callback();
     }
 };
+
+//表单校验规则
 const rules = {
     account:[
         {required: true, message: '请输入学号', trigger: 'blur'},
@@ -47,20 +78,47 @@ const rules = {
         {validator: checkRePassword, message: '两次输入密码不一致', trigger: 'blur'}
     ],
 };
-const dialogConfig = reactive({
-    show:false,
-    title:"标题",
-});
 
-const resetForm = () =>{
-    dialogConfig.show = true;
-    if (opType.value == 1) {
-        dialogConfig.title = "用户登录";
-    } else {
-        dialogConfig.title = "重置密码";
-    }
-    nextTick(() => {
-        formDataRef.value.resetFields();
+//接口地址
+const api = {
+    login:"/api/auth/login",
+    changePassword:"/api/users/id/password"
+}
+
+//提交表单
+const doSubmit = () => {
+    formDataRef.value.validate(async(valid) => {
+        if (!valid) {
+            return;
+        }
+        let params ={};
+        Object.assign(params, formData.value);
+        
+        //设置url
+        let url = "";
+        if (opType.value == 1) {
+            url = api.login;
+        } else {
+            url = api.changePassword;
+        }
+
+        let result = await proxy.Request({
+            url:url,
+            params:params,
+            dataType: 'json',
+        })
+        if (!result) {
+            return;
+        }
+
+        if (opType.value == 1) {
+            proxy.Message.success("登录成功");
+            dialogConfig.show = false;
+            router.go(0);
+        } else {
+            proxy.Message.success("密码重置成功，请使用新密码登录");
+            showPanel(1);
+        }
     });
 }
 </script>
@@ -201,11 +259,16 @@ const resetForm = () =>{
                 <a href="javascript:void(0)" class="a-link">去登陆</a>
             </div>
         </el-form-item>    
-        <el-form-item v-if="opType == 1">
-            <el-button type="primary" size="large" style="width: 100%;">登录</el-button>
-        </el-form-item>
-        <el-form-item v-if="opType == 0">
-            <el-button type="primary" size="large" style="width: 100%;">确认重置</el-button>
+        <el-form-item>
+            <el-button 
+            type="primary" 
+            size="large" 
+            style="width: 100%;"
+            @click="doSubmit"
+            >
+                <span v-if="opType == 1">登 录</span>
+                <span v-else>确 定</span>
+            </el-button>
         </el-form-item>
     </el-form>
     </Dialog>
