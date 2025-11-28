@@ -1,6 +1,5 @@
-删除了超级管理员登出，因为无状态改变
-
-删除了创建函数，改用命令行创建
+ADMIN_ACCOUNT "admin"     // 管理员账号
+ADMIN_PASSWORD "admin123" // 管理员密码
 users:
 CREATE TABLE IF NOT EXISTS users (
                     account VARCHAR(20) PRIMARY KEY,       //账号
@@ -42,6 +41,7 @@ CREATE TABLE IF NOT EXISTS comments (
       parent_id INTEGER DEFAULT NULL, // 父评论ID（用于回复功能，NULL表示顶层评论）
       like_count INTEGER DEFAULT 0,                  // 点赞数
       is_deleted BOOLEAN DEFAULT 0,                  // 软删除标记
+      is_anonymous INTEGER DEFAULT 0; //是否匿名
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, // 创建时间
       FOREIGN KEY (post_id) REFERENCES posts(post_id) ON DELETE CASCADE, // 外键关联帖子
       FOREIGN KEY (account) REFERENCES users(account) ON DELETE CASCADE, // 外键关联用户
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS notifications (
       notification_id INTEGER PRIMARY KEY AUTOINCREMENT, // 通知ID
       receiver_account VARCHAR(20) NOT NULL, // 接收通知的用户账号
       sender_account VARCHAR(20), // 发送通知的用户账号（系统通知时可为NULL）
-      type VARCHAR(20) NOT NULL, // 通知类型：comment(有人评论你的帖子)/reply(有人回复你的评论)/like(有人点赞你的帖子)/system(系统通知)
+      type VARCHAR(20) NOT NULL, // 通知类型：comment(有人评论你的帖子)/reply(有人回复你的评论)/likepost(有人点赞你的帖子)/likecomment
       related_id INTEGER, // 相关ID（帖子ID或评论ID，根据type决定）
       content TEXT NOT NULL, // 通知内容，例如："user2 评论了你的帖子《标题》"
       is_read BOOLEAN DEFAULT 0, // 是否已读（0=未读，1=已读）
@@ -95,4 +95,11 @@ CREATE TABLE IF NOT EXISTS notifications (
       //当删除发送者用户时，不删除通知，而是将发送者设为NULL
       FOREIGN KEY (sender_account) REFERENCES users(account) ON DELETE SET 
       NULL // 外键：关联发送者
+      UNIQUE(receiver_account, sender_account, type, related_id)
       );
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id TEXT PRIMARY KEY,
+    account TEXT NOT NULL,
+    is_admin INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
