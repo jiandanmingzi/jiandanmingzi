@@ -1,6 +1,6 @@
 import axios from "axios";
 import { ElLoading } from "element-plus";
-import Message from "./message";
+import Message from "./Message";
 
 const contentTypeForm = "application/x-www-form-urlencoded;charset=UTF-8";
 const contentTypeJson = "application/json;charset=UTF-8";
@@ -33,55 +33,108 @@ instance.interceptors.request.use(
 //请求后过滤器
 instance.interceptors.response.use(
     (response) => {
-        const {showLoading, errorCallback,showError} = response.config;
-        if (showLoading && loading){
+        const { showLoading, errorCallback, showError } = response.config;
+        if (showLoading && loading) {
             loading.close();
         }
         const responseData = response.data;
-        if (responseData.code === 200){
+        if (responseData.code === 200) {
             return responseData.data;
         } else {
             const error = new Error(responseData.message || "请求失败，请稍后重试！");
             error.showError = showError;
-            if (errorCallback && typeof errorCallback === "function"){
+            if (errorCallback && typeof errorCallback === "function") {
                 errorCallback(responseData);
             }
             return Promise.reject(error);
         }
-    }, (error) => {
-        if(config.showLoading && loading){
+    }, 
+    (error) => {
+        if (error.config && error.config.showLoading && loading) {
             loading.close();
         }
-        return Promise.reject(new Error("网络异常"));
+        
+        // 具体的超时错误处理
+        if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+            Message.error("请求超时，请检查网络连接或稍后重试！");
+        } else if (error.response) {
+            // 服务器响应了但状态码不在 2xx 范围
+            const status = error.response.status;
+            switch (status) {
+                case 401:
+                    Message.error("未授权，请重新登录！");
+                    break;
+                case 403:
+                    Message.error("拒绝访问！");
+                    break;
+                case 404:
+                    Message.error("请求地址不存在！");
+                    break;
+                case 500:
+                    Message.error("服务器内部错误！");
+                    break;
+                default:
+                    Message.error("网络异常，请稍后重试！");
+            }
+        } else if (error.request) {
+            // 请求发送了但没有收到响应
+            Message.error("网络连接异常，请检查网络！");
+        } else {
+            // 其他错误
+            Message.error("请求配置错误！");
+        }
+        
+        return Promise.reject(error);
     }
-
 );
 
+
 const Request = (config) => {
-    const {url,params,dataType,showLoading=true, errorCallback, showError = true} = config;
+    const {
+        url,
+        params = {},
+        dataType,
+        method = 'post',
+        showLoading = true, 
+        errorCallback, 
+        showError = true
+    } = config;
+    
     let contentType = contentTypeForm;
-    let formData = new FormData();
-    for(let key in params){
-        formData.append(key, params[key] == undefined ? "" : params[key]);
-    }
-    if (dataType !== null && dataType === "json"){
-        contentType = contentTypeJson;
-    }
-    let headers = {
-        "Content-Type": contentType,
-        "X-Requested-With": "XMLHttpRequest"
-    }
-    return instance.post(url, formData, {
-        headers: headers,
+    let requestConfig = {
+        method: method.toLowerCase(),
+        url: url,
         showLoading: showLoading,
         errorCallback: errorCallback,
-        showError: showError
-    }).catch(error => {
+        showError: showError,
+        headers: {
+            "X-Requested-With": "XMLHttpRequest"
+        }
+    };
+    
+    if (method.toLowerCase() === 'get') {
+        requestConfig.params = params;
+    } else {
+        if (dataType === "json") {
+            contentType = contentTypeJson;
+            requestConfig.data = params;
+            requestConfig.headers["Content-Type"] = contentType;
+        } else {
+            let formData = new FormData();
+            for(let key in params){
+                formData.append(key, params[key] == undefined ? "" : params[key]);
+            }
+            requestConfig.data = formData;
+            delete requestConfig.headers["Content-Type"];
+        }
+    }
+    
+    return instance(requestConfig).catch(error => {
         if (error.showError){
             Message.error(error.message);
         }
         return null;
-    })
-}
+    });
+};
 
 export default Request;

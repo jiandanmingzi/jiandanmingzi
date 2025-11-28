@@ -1,12 +1,13 @@
 <script setup>
 import { dataType } from 'element-plus/es/components/table-v2/src/common';
 import { ref, reactive, getCurrentInstance, onMounted, nextTick } from 'vue';
+import { useStore } from 'vuex';
 import { useRouter, useRoute } from 'vue-router';
 const {proxy} = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const opType = ref();
-
+const store = useStore();
 //初始化表单数据
 const formData = ref({});
 const formDataRef = ref();
@@ -106,15 +107,27 @@ const doSubmit = () => {
             url:url,
             params:params,
             dataType: 'json',
+            method: opType.value == 1 ? 'post' : 'put',
         })
+
         if (!result) {
             return;
         }
 
         if (opType.value == 1) {
-            proxy.Message.success("登录成功");
+            if (params.rememberMe) {
+                const loginInfo = {
+                    account: params.account,
+                    password: params.password,
+                    rememberMe: params.rememberMe
+                }
+                proxy.VueCookies.set("loginInfo", loginInfo, "7d");
+            }else{
+                proxy.VueCookies.remove("loginInfo");
+            }
             dialogConfig.show = false;
-            router.go(0);
+            proxy.Message.success("登录成功");
+            store.commit('updateLoginUserInfo', result);
         } else {
             proxy.Message.success("密码重置成功，请使用新密码登录");
             showPanel(1);
