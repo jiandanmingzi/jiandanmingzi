@@ -21,12 +21,15 @@ const props = defineProps({
                 <el-divider direction="vertical"></el-divider>
                 <div class="post-time">{{ data.postTime }}</div>
                 <el-divider direction="vertical"></el-divider>
-                <router-link :to="'/board/'" class="link-info">
+                <router-link :to="`/forum/${data.boardId}`" class="link-info">
                     {{ data.boardName }}
                 </router-link>
             </div>
-            <router-link :to="'/article/'" class="article-title">
-                {{ data.title }}
+            <router-link :to="`/post/${data.articleId}`" class="article-title">
+                <span v-if="data.topType == 1" class="top">
+                    置顶
+                </span>
+                <span class="title">{{ data.title }}</span>
             </router-link>
             <div class="summary">{{ data.summary }}</div>
             <div class="article-info">
@@ -34,10 +37,10 @@ const props = defineProps({
                     {{ data.readCount == 0 ? '阅读' : data.readCount }}
                 </span>
                 <span class="iconfont icon-good">
-                    {{ data.readCount == 0 ? '点赞' : data.goodCount }}
+                    {{ data.goodCount == 0 ? '点赞' : data.goodCount }}
                 </span>
                 <span class="iconfont icon-comment">
-                    {{ data.readCount == 0 ? '评论' : data.commentCount }}
+                    {{ data.commentCount == 0 ? '评论' : data.commentCount }}
                 </span>
             </div>
         </div>
@@ -47,7 +50,7 @@ const props = defineProps({
 
 <style scoped lang="scss">
 .article-item{
-    padding: 5px 10px 0 10px;
+    padding: 5px 15px 0 15px;
     .article-item-inner{
         border-bottom: 1px solid#ddd;
         padding: 10px;
@@ -70,11 +73,19 @@ const props = defineProps({
             }
             .article-title{
                 font-weight: bold;
-                text-decoration: none;
                 color: #4a4a4a;
+                text-decoration: none;
                 font-size: 16px;
                 margin: 10px 0;
-                display: inline-block
+                display: inline-block;
+                .top{
+                    font-size: 12px;
+                    border-radius: 5px;
+                    border: 1px solid var(--pink);
+                    color: var(--pink);
+                    padding: 0px 5px;
+                    margin-right: 10px;
+                }
             }
             .summary{
                 font-size: 14px;

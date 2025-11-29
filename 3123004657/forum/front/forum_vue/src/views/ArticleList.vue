@@ -4,40 +4,39 @@ import { ref, reactive, getCurrentInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { watch } from 'vue';
 import { useStore } from 'vuex';
-import { dataType } from 'element-plus/es/components/table-v2/src/common';
 const {proxy} = getCurrentInstance();
-const router = useRouter();
 const route = useRoute();
 const store = useStore();
 
 const api = {
     loadArticle: '/api/posts',
 }
-const boardId = ref(0);
-const yearId = ref(0);
-const roleId = ref(0);
+const boardId = ref('0');
+const yearId = ref('0');
+const roleId = ref('0');
 const orderType = ref(0);
 const loading = ref(false);
 const articleListInfo = ref({});
 const yearList = ref([]);
 const roleList = ref([]);
 
-const setYearList = () => {
+const getYearList = () => {
     yearList.value = store.getters.getYearList;
 };
-setYearList();
+getYearList();
         
-const setRoleList = () => {
+const getRoleList = () => {
     roleList.value = store.getters.getRoleList;
 };
-setRoleList();
+getRoleList();
 
 const changOrderType = (type)=>{
     orderType.value = type;
-    loadArticle();
+    loadArticle("order");
 }
 
-const loadArticle = async() => {
+const loadArticle = async (reason) => {
+    /*
     loading.value = true;
     let params = {
         pageNo: articleListInfo.value.pageNo || 1,
@@ -62,26 +61,99 @@ const loadArticle = async() => {
         return;
     }
     articleListInfo.value = result.data;
+    */
+    console.log("Loading articles due to:", reason);
+    //本地示例
+    console.log("Loading articles locally");
+    articleListInfo.value = {
+        pageNo: 1,
+        pageSize: 10,
+        totalCount: 2,
+        totalPage: 1,
+        dataList: [
+            {
+                articleId: "1",
+                userId: "12345",
+                nickName: "示例用户",
+                postTime: "2024-01-01 12:00",
+                boardId: "campus_life",
+                boardName: "校园生活",
+                topType: 0,
+                title: "校园活动回顾",
+                summary: "上周我们举办了一场精彩的校园活动，快来看看吧！",
+                readCount: 256,
+                goodCount: 34,
+                commentCount: 12,
+            },
+            {
+                articleId: "2",
+                userId: "u2",
+                nickName: "用户二",
+                postTime: "2024-01-02 11:00",
+                boardId: "campus_life",
+                boardName: "校园生活",
+                topType: 0,
+                title: "校园活动回顾",
+                summary: "上周我们举办了一场精彩的校园活动，快来看看吧！",
+                readCount: 80,
+                goodCount: 15,
+                commentCount: 5,
+            },
+        ],
+    };
+};
+
+const saveBoardId = (boardIdValue) => {
+    boardId.value = boardIdValue;
+    store.commit('saveBoardId', boardIdValue);
 };
 
 const saveYearId = (yearIdValue) => {
-    store.commit('saveYearId', yearIdValue);
     yearId.value = yearIdValue;
+    store.commit('saveYearId', yearIdValue);
+};
+
+const setYearId_0 = () => {
+    yearId.value = '0';
+    store.commit('saveYearId', '0');
+    loadArticle("yearId");
 };
 
 const saveRoleId = (roleIdValue) => {
-    store.commit('saveRoleId', roleIdValue);
     roleId.value = roleIdValue;
+    store.commit('saveRoleId', roleIdValue);
 };
 
-loadArticle();
+const setRoleId_0 = () => {
+    roleId.value = '0';
+    store.commit('saveRoleId', '0');
+    loadArticle("roleId");
+};
 
 watch(
-    () => store.state,
+    () => store.state.yearId,
     (newVal,  oldVal) => {
-        yearId.value = newVal.yearId || 0;
-        roleId.value = newVal.roleId || 0;
-        loadArticle();
+        if (oldVal != undefined && oldVal != newVal){
+            yearId.value = newVal;
+            console.log("yearId changed:", yearId.value);
+            if (yearId.value != '0'){
+                loadArticle("yearId");
+            }
+        }
+    },
+    { immediate: true , deep: true}
+)
+
+watch(
+    () => store.state.roleId,
+    (newVal,  oldVal) => {
+            if (oldVal != undefined && oldVal != newVal){
+            roleId.value = newVal;
+            console.log("roleId changed:", roleId.value);
+            if (roleId.value != '0'){
+                loadArticle("roleId");
+            }
+        }
     },
     { immediate: true , deep: true}
 )
@@ -90,17 +162,17 @@ watch(
     () => route.params,
     (newVal, oldVal) => {
         if (newVal.boardId) {
-            boardId.value = newVal.boardId;
+            saveBoardId(newVal.boardId);
         } else {
-            boardId.value = 0;
+            saveBoardId('0');
         }
-        saveYearId(0);
-        saveRoleId(0);
-        loadArticle();
+        saveYearId('0');
+        saveRoleId('0');
+        orderType.value = 0;
+        loadArticle("route");
     },
     { immediate: true , deep: true}
 )
-
 </script>
 
 <template>
@@ -109,14 +181,14 @@ watch(
     :style="{ width: proxy.globalInfo.bodyWidth + 'px' }"
     >
         <div class="sub-board">
-            <span :class="['year-role-item', roleId == 0 ? 'active' : '']" @click="saveRoleId(0)">
+            <span :class="['year-role-item', roleId == '0' ? 'active' : '']" @click="setRoleId_0()">
                 全部
             </span>
             <span v-for="item in roleList" :class="['year-role-item', item.roleId == roleId ? 'active' : '']" @click="saveRoleId(item.roleId)">
                 {{ item.roleName }}
             </span>
             <div class="divider"></div>
-            <span :class="['year-role-item', yearId == 0 ? 'active' : '']" @click="saveYearId(0)">
+            <span :class="['year-role-item', yearId == '0' ? 'active' : '']" @click="setYearId_0()">
                 全部
             </span>
             <span v-for="item in yearList" :class="['year-role-item', item.yearId == yearId ? 'active' : '']" @click="saveYearId(item.yearId)">
@@ -203,7 +275,7 @@ watch(
         .top-tab{
             display: flex;
             align-items: center;
-            padding: 10px;
+            padding: 10px 15px;
             font-size: 15px;
             border-bottom: 1px solid #ddd;
             .tab{

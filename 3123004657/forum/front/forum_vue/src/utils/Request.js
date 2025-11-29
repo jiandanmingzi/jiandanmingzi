@@ -1,6 +1,7 @@
 import axios from "axios";
 import { ElLoading } from "element-plus";
 import Message from "./Message";
+import store from "@/store";
 
 const contentTypeForm = "application/x-www-form-urlencoded;charset=UTF-8";
 const contentTypeJson = "application/json;charset=UTF-8";
@@ -40,7 +41,11 @@ instance.interceptors.response.use(
         const responseData = response.data;
         if (responseData.code === 200) {
             return responseData.data;
-        } else {
+        } else if (responseData.code === 401) {
+            store.commit("showLoginDialog", true);
+            store.commit("updateLoginUserInfo", null);
+            return Promise.reject({ showError: showError, message: "未登录或登录已过期，请重新登录！" });
+        }else {
             const error = new Error(responseData.message || "请求失败，请稍后重试！");
             error.showError = showError;
             if (errorCallback && typeof errorCallback === "function") {

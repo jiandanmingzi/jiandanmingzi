@@ -69,9 +69,16 @@ const boardList = ref([
     },
 ])
 
+const saveBoardId = (boardIdValue) => {
+    store.commit('saveBoardId', boardIdValue);
+}
+
+const getBoardId = () => {
+    return store.state.boardId;
+}
+
 const loadBoard = () =>{
     store.commit('saveBoardList', boardList.value);
-    store.commit('saveBoardId', '0');
 }
 loadBoard();
 
@@ -102,7 +109,6 @@ const yearList = ref([
 
 const loadYear = () =>{
     store.commit('saveYearList', yearList.value);
-    store.commit('saveYearId', '0');
 }
 loadYear();
 
@@ -119,7 +125,6 @@ const roleList = ref([
 
 const loadRole = () =>{
     store.commit('saveRoleList', roleList.value);
-    store.commit('saveRoleId', '0');
 }
 loadRole();
 
@@ -166,9 +171,9 @@ onMounted(() => {
             >
                 <router-link to="/" class="logo">广东校园论坛</router-link>
                 <div class="menu-panel">
-                    <router-link class="menu-item" to="/">首页</router-link>
+                    <router-link :class="['menu-item',  getBoardId() == '0' ? 'active' : '']" to="/" >首页</router-link>
                     <template v-for="board in boardList">
-                        <span class="menu-item" @click="boardClickHandler(board)">{{ board.boardName }}</span>
+                        <span :class="['menu-item', board.boardId == getBoardId() ? 'active' : '']" @click="boardClickHandler(board)">{{ board.boardName }}</span>
                     </template>
                 </div>
                 <div class="user-info-panel">
@@ -247,6 +252,9 @@ onMounted(() => {
                 cursor: pointer;
                 text-decoration: none;
                 color : #000000;
+            }
+            .active{
+                color: var(--link);
             }
         }
         .user-info-panel {
