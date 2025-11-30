@@ -31,7 +31,7 @@ const handlePageNoChange = (pageNo) => {
     <el-pagination
         v-if="dataSource.pageTotal > 1"
         background
-        :total="dataSource.pageNo"
+        :total="dataSource.totalCount"
         :current-page.sync="dataSource.pageNo"
         layout="prev, pager, next"
         @current-change="handlePageNoChange"

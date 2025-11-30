@@ -16,10 +16,21 @@ import Dialog from './components/Dialog.vue'
 import DataList from './components/DataList.vue'
 import NoData from './components/NoData.vue'
 
+import VMdEditor from '@kangc/v-md-editor';
+import '@kangc/v-md-editor/lib/style/base-editor.css';
+import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
+import '@kangc/v-md-editor/lib/theme/style/github.css';
+import hljs from 'highlight.js';
+
+VMdEditor.use(githubTheme, {
+  Hljs: hljs,
+});
+
 const app = createApp(App)
 app.use(store)
 app.use(router)
 app.use(ElementPlus);
+app.use(VMdEditor)
 app.config.globalProperties.VueCookies = VueCookies;
 app.config.globalProperties.Verify = Verify;
 app.config.globalProperties.Message = Message;

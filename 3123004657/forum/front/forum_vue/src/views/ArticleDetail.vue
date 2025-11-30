@@ -151,7 +151,7 @@ const doCollectHandler = async () => {
             <div class="user-info">
                 <Avatar :userId="articleInfo.userId"></Avatar>
                 <div class="article-user-info">
-                    <router-link class="nick-name" :to="`/user/${articleInfo.userId}`">{{articleInfo.nickName}}</router-link>
+                    <router-link class="nick-name" :to="`/ucenter/${articleInfo.userId}`">{{articleInfo.nickName}}</router-link>
                     <div class="article-info">
                         <span>{{articleInfo.createTime}}</span>
                         <span class="iconfont icon-eye-solid">

@@ -24,7 +24,7 @@ const props = defineProps({
 
 const goToUcenter = () => {
     if (props.addLink) {
-        router.push({ path: "/user/" + proxy.userId });
+        router.push({ path: "/ucenter/" + proxy.userId });
     }
 };
 </script>

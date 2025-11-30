@@ -155,6 +155,14 @@ watch(
     { immediate: true, deep: true }
 );
 
+const handlePostPost = () => {
+    if (store.state.loginUserInfo == null) {
+        store.commit('showLoginDialog', true);
+        return;
+    }
+    router.push({ path: '/newPost' });
+}
+
 onMounted(() => {
     initScroll();
     getUserInfo();
@@ -177,10 +185,10 @@ onMounted(() => {
                     </template>
                 </div>
                 <div class="user-info-panel">
-                    <el-button type="primary">
+                    <el-button type="primary" @click="handlePostPost()">
                         发帖<span class="iconfont icon-add"></span>
                     </el-button>
-                    <el-button type="primary">
+                    <el-button type="primary" @click="handleSearch()">
                         搜索<span class="iconfont icon-search"></span>
                     </el-button>
                     <div v-if="userInfo.userId">
