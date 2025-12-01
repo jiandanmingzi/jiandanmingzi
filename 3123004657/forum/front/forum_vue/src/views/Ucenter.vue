@@ -43,7 +43,7 @@ const loadUserInfo = async () => {
         sex: 1, // 0:女, 1:男
         personDescription: "会写前端的后端程序员，热爱技术，热爱生活。",
         avatar: "", 
-        roleType: 1, // 1:学生, 2:老师
+        roleType: "student", // "student":学生, "teacher":老师
         grade: "2020",
         major: "计算机科学与技术",
         postCount: 12,
@@ -152,10 +152,10 @@ watch(
             <div class="user-extend-panel">
                 <div class="info-item">
                     <span class="label iconfont icon-user"></span>
-                    <span class="value">{{ userInfo.roleType == 1 ? '学生' : '老师' }}</span>
+                    <span class="value">{{ userInfo.roleType == "student" ? '学生' : '老师' }}</span>
                 </div>
                 <!-- 学生特有信息 -->
-                <template v-if="userInfo.roleType == 1">
+                <template v-if="userInfo.roleType == 'student' ">
                     <div class="info-item">
                         <span class="label iconfont icon-school"></span>
                         <span class="value">{{ userInfo.major }}</span>

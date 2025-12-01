@@ -28,28 +28,19 @@ const commentListInfo = ref({});
 const orderType = ref(0); // 0:热榜 1:最新
 const commentContent = ref("");
 
-const indexCommentReply = () => {
-    for (let comment of commentListInfo.value.list) {
-        comment.showSubPagination = false;
-        comment.showReply = false;
-        comment.replyContent = "";
-    }
-}
-
-//本地模拟数据-----------------------------------------------------------------------
-
-// 生成子评论
-const mockSubCommentsService = (totalCount) => {
+// 模拟后端获取子评论数据的逻辑
+// pageNo: 请求页码
+const mockSubCommentsService = (pageNo = 1) => {
     const pageSize = 10;
+    const totalCount = 32; // 假设总共有32条子评论
     const totalPage = Math.ceil(totalCount / pageSize);
     
     const list = [];
     // 模拟后端逻辑：返回 (x-1)*10+1 到 x*10 条
-    const start = 1;
-    const end = totalCount;
+    const start = (pageNo - 1) * pageSize + 1;
+    const end = Math.min(pageNo * pageSize, totalCount);
 
     for (let k = start; k <= end; k++) {
-        let pageNo = Math.ceil(k / pageSize);
         list.push({
             commentId: `sub_${k}`,
             userId: `subUser${k}`,
@@ -65,41 +56,19 @@ const mockSubCommentsService = (totalCount) => {
 
     return {
         dataList: list,
-        pageNo: 1,
+        pageNo: pageNo,
         pageTotal: totalPage,
         totalCount: totalCount
-    };
-};
-
-const getSubComments = (parentCommentId, pageNo) => {
-    const pageSize = 10;
-    
-    for (let comment of commentListInfo.value.list) {
-        if (comment.commentId === parentCommentId) {
-            const allSubComments = comment.subCommentInfo.allDataList || comment.subCommentInfo.dataList;
-            const startIndex = (pageNo - 1) * pageSize;
-            const endIndex = startIndex + pageSize;
-            
-            return {
-                dataList: allSubComments.slice(startIndex, endIndex),
-                pageNo: pageNo,
-                pageTotal: comment.subCommentInfo.pageTotal,
-                totalCount: comment.subCommentInfo.totalCount
-            };
-        }
-    }
-    return {
-        dataList: [],
-        pageNo: 1,
-        pageTotal: 0,
-        totalCount: 0
     };
 };
 
 // 生成本地测试数据
 const getMockComments = () => {
     const list = [];
-    for (let i = 1; i <= 5; i++) {
+    const pageNo = commentListInfo.value.pageNo || 1;
+    const pageSize = 10;
+    const totalCount = 44; // 假设总共有44条评论
+    for (let i = (pageNo - 1) * pageSize + 1; i <= (Math.min(pageNo * pageSize, totalCount)); i++) {
         // 只有第一条评论有大量子评论用于测试分页
         const hasSub = i === 1; 
         
@@ -111,106 +80,87 @@ const getMockComments = () => {
         };
 
         if (hasSub) {
-            subCommentInfo = mockSubCommentsService(32);
+            // 初始加载：模拟发送不带页数的请求，后端默认返回第一页(10条)
+            subCommentInfo = mockSubCommentsService(1);
         }
 
         list.push({
-            articleId: props.articleId,
             commentId: `${i}`,
             userId: i === 1 ? props.articleUserId : `user${i}`,
             nickName: i === 1 ? "程序员" : `路人甲${i}`,
             avatar: "", 
-            content: i === 1 ? "沙发自己做" : "测试评论内容",
+            content: i === 1 ? "沙发自己做" : `测试评论${i}，内容随便写的。`,
             postTime: "2023-01-16 20:54",
             goodCount: i === 1 ? 14 : 3,
             // 子评论数据结构调整，适应DataList
             subCommentInfo: subCommentInfo,
-            liked: false, // 是否点赞
+            showSubPagination: false, // 控制是否展开显示分页
+            showReply: false, // 控制一级回复框显示
+            liked: false,
         });
     }
     return {
-        list: list,
-        totalCount: 44,
+        dataList: list,
+        pageNo: pageNo,
+        pageSize: pageSize,
+        totalCount: totalCount,
+        pageTotal: Math.ceil(totalCount / pageSize)
     };
 };
 
-const indexComment = () => {
-    commentListInfo.value = getMockComments();
-}
-indexComment();
-
-//---------------------------------------------------------------------------------
-
-
 const loadComment = async () => {
-    // 模拟API请求
-    console.log("Loading comments...");
-
-    /* let result = await proxy.Request({
+    /*
+    let params = {
+        articleId: props.articleId,
+        pageNo: commentListInfo.value.pageNo || 1,
+        orderType: orderType.value,
+    };
+    let result = await proxy.Request({
         url: api.loadComment,
-        params: {
-            articleId: props.articleId,
-            orderType: orderType.value,
-        }
-    }); 
+        dataType: "json",
+        params: params,
+    });
+    if (!result) {
+        return;
+    }
+    commentListInfo.value = result.data;
     */
 
-
-    indexCommentReply();
+    // 模拟API请求
+    console.log("Loading comments...");
+    console.log(`加载第 ${commentListInfo.value.pageNo} 页评论，排序方式：${orderType.value === 0 ? '热榜' : '最新'}`);
+    commentListInfo.value = getMockComments();
 };
 
 loadComment();
 
 // 分页加载子评论
-const loadSubComment = /*async*/ (item) => {
+const loadSubComment = async (item) => {
     console.log(`加载评论 ${item.commentId} 的第 ${item.subCommentInfo.pageNo} 页子评论`);
     
     // 模拟API请求
     // let result = await proxy.Request({
     //     url: api.loadSubComment,
     //     params: {
-    //         parentCommentId: item.commentId,
-    //         pageNo: pageNo
+    //         commentId: item.commentId,
+    //         pageNo: item.subCommentInfo.pageNo
     //     }
     // })
     
     // 本地模拟数据返回
-    // 本地模拟数据返回
-    const result = getSubComments(item.commentId, item.subCommentInfo.pageNo);
+    const result = mockSubCommentsService(item.subCommentInfo.pageNo);
     
     // 更新当前评论的子评论列表
     item.subCommentInfo.dataList = result.dataList;
-    item.subCommentInfo.pageNo = result.pageNo; // 确保页码同步
     item.subCommentInfo.pageTotal = result.pageTotal;
     item.subCommentInfo.totalCount = result.totalCount;
 };
 
-const postCommentHandler = /*async*/() => {
+const postCommentHandler = () => {
     if (!commentContent.value) {
         proxy.$message.warning("请输入评论内容");
         return;
     }
-
-    /*
-    let result = await proxy.Request({
-        url: api.postComment,
-        dataType: "json",
-        params: {
-            articleId: props.articleId,
-            content: commentContent.value,
-        },
-        method: 'post',
-    });
-    if(!result){
-        return;
-    }
-    if (result.data.status == 'success') {
-        proxy.$message.success("评论成功");
-        commentContent.value = "";
-        loadComment();
-    }
-    */
-
     // 模拟提交
     commentListInfo.value.list.unshift({
         commentId: "new_" + Date.now(),
@@ -219,51 +169,16 @@ const postCommentHandler = /*async*/() => {
         content: commentContent.value,
         postTime: "刚刚",
         goodCount: 0,
+        liked: false,
         subCommentInfo: { dataList: [], pageNo: 1, pageTotal: 0, totalCount: 0 },
+        showSubPagination: false,
+        showReply: false
     });
     commentContent.value = "";
     proxy.$message.success("评论成功");
-    loadComment();
 };
 
-const postSubCommentHandler = /*async*/(item) => {
-    /*
-    let result = await proxy.Request({
-        url: api.postComment,
-        dataType: "json",
-        params: {
-            articleId: item.articleId,
-            content: item.replyContent,
-            parentCommentId: item.commentId,
-        },
-        method: 'post',
-    });
-    if(!result){
-        return;
-    }
-    if (result.data.status == 'success') {
-        proxy.$message.success("子评论提交成功");
-        loadComment();
-    }
-    */
-
-    // 模拟提交
-    item.subCommentInfo.dataList.unshift({
-        commentId: "sub_new_" + Date.now(),
-        userId: store.getters.getLoginUserInfo?.userId || "me",
-        nickName: store.getters.getLoginUserInfo?.nickName || "我",
-        content: item.replyContent,
-        postTime: "刚刚",
-        goodCount: 0,
-        liked: false,
-    });
-    item.replyContent = "";
-
-    proxy.$message.success("子评论提交成功");
-    loadComment();
-};
-
-const doLike = /*async*/ (item) => {
+const doLike = (item) => {
     /*
     let result = await proxy.Request({
         url: api.doLike,
@@ -273,26 +188,23 @@ const doLike = /*async*/ (item) => {
         },
         method: 'post',
     });
+
     if(!result){
         return;
     }
     if (result.data.status == 'success') {
         item.liked = !item.liked;
-        if (item.liked){
+        if (item.liked) {
             item.goodCount += 1;
-            proxy.$message.success("点赞成功");
         } else {
             item.goodCount -= 1;
-            proxy.$message.success("取消点赞");
         }
     }
-    */
+        */
     if (item.liked){
         item.goodCount -= 1;
-        proxy.$message.success("取消点赞");
     } else {
         item.goodCount += 1;
-        proxy.$message.success("点赞成功");
     }
     item.liked = !item.liked;
 };
@@ -302,11 +214,11 @@ const showReplyPanel = (item) => {
 };
 
 const changeOrder = (type) => {
-
     orderType.value = type;
     loadComment();
 };
 </script>
+
 
 <template>
     <div class="comment-body">
@@ -341,36 +253,41 @@ const changeOrder = (type) => {
 
         <!-- 评论列表 -->
         <div class="comment-list">
-            <div class="comment-item" v-for="item in commentListInfo.list" :key="item.commentId">
+        <DataList 
+            :dataSource="commentListInfo" 
+            @loadData="loadComment()"
+            >
+            <template #default="{data}">
+            <div class="comment-item" :key="data.commentId">
                 <div class="avatar-box">
-                    <Avatar :width="40" :userId="item.userId"></Avatar>
+                    <Avatar :width="40" :userId="data.userId"></Avatar>
                 </div>
                 <div class="comment-content">
                     <div class="nick-name">
-                        <span class="name">{{ item.nickName }}</span>
-                        <span v-if="item.userId === articleUserId" class="author-tag">作者</span>
+                        <span class="name">{{ data.nickName }}</span>
+                        <span v-if="data.userId === articleUserId" class="author-tag">作者</span>
                     </div>
-                    <div class="comment-text" v-html="item.content"></div>
+                    <div class="comment-text" v-html="data.content"></div>
                     
                     <!-- 评论底部信息 -->
                     <div class="comment-info">
-                        <span class="time">{{ item.postTime }}</span>
-                        <span :class="['like-icon', item.liked ? 'liked' : '']" @click="doLike(item)">
+                        <span class="time">{{ data.postTime }}</span>
+                        <span :class="['like-icon', data.liked ? 'liked' : '']" @click="doLike(data)">
                             <span class="iconfont icon-good"></span>
-                            {{ item.goodCount > 0 ? item.goodCount : '点赞' }}
+                            {{ data.goodCount > 0 ? data.goodCount : '点赞' }}
                         </span>
-                        <span :class="['reply-btn', item.showReply ? 'active' : '']" @click="showReplyPanel(item)">
+                        <span :class="['reply-btn', data.showReply ? 'active' : '']" @click="showReplyPanel(data)">
                             <span class="iconfont icon-comment"></span>
                             回复
                         </span>
                     </div>
 
                     <!-- 子评论列表 -->
-                    <div class="sub-comment-list" v-if="item.subCommentInfo && item.subCommentInfo.dataList.length > 0">
+                    <div class="sub-comment-list" v-if="data.subCommentInfo && data.subCommentInfo.dataList.length > 0">
                         
                         <!-- 未展开状态：只显示前3条 -->
-                        <template v-if="!item.showSubPagination">
-                            <div class="sub-comment-item" v-for="sub in item.subCommentInfo.dataList.slice(0, 3)" :key="sub.commentId">
+                        <template v-if="!data.showSubPagination">
+                            <div class="sub-comment-item" v-for="sub in data.subCommentInfo.dataList.slice(0, 3)" :key="sub.commentId">
                                 <div class="avatar-box">
                                     <Avatar :width="30" :userId="sub.userId"></Avatar>
                                 </div>
@@ -392,9 +309,9 @@ const changeOrder = (type) => {
                                 </div>
                             </div>
                             <!-- 展开按钮 -->
-                            <div class="more-comment" v-if="item.subCommentInfo.totalCount > 3">
-                                <span @click="item.showSubPagination = true">
-                                    共{{ item.subCommentInfo.totalCount }}条回复，点击查看
+                            <div class="more-comment" v-if="data.subCommentInfo.totalCount > 3">
+                                <span @click="data.showSubPagination = true">
+                                    共{{ data.subCommentInfo.totalCount }}条回复，点击查看
                                 </span>
                             </div>
                         </template>
@@ -402,8 +319,8 @@ const changeOrder = (type) => {
                         <!-- 展开状态：使用DataList显示分页 -->
                         <template v-else>
                             <DataList 
-                                :dataSource="item.subCommentInfo" 
-                                @loadData="loadSubComment(item)"
+                                :dataSource="data.subCommentInfo" 
+                                @loadData="loadSubComment(data)"
                             >
                                 <template #default="{data}">
                                     <div class="sub-comment-item">
@@ -432,7 +349,7 @@ const changeOrder = (type) => {
                             </DataList>
                             <!-- 收起按钮 -->
                             <div class="more-comment">
-                                <span @click="item.showSubPagination = false">
+                                <span @click="data.showSubPagination = false">
                                     收起回复
                                 </span>
                             </div>
@@ -440,10 +357,10 @@ const changeOrder = (type) => {
                     </div>
 
                     <!-- 回复输入框 -->
-                    <div class="reply-input-panel" v-if="item.showReply">
+                    <div class="reply-input-panel" v-if="data.showReply">
                          <el-input 
                          placeholder="回复..." 
-                         v-model="item.replyContent"
+                         v-model="data.replyContent"
                          type="textarea"
                         :rows="2"
                         maxlength="800"
@@ -456,6 +373,8 @@ const changeOrder = (type) => {
                     </div>
                 </div>
             </div>
+            </template>
+        </DataList>
         </div>
     </div>
 </template>
@@ -525,11 +444,8 @@ const changeOrder = (type) => {
             margin-right: 50px;
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid #ddd;
             padding-bottom: 20px;
-            &:last-child {
-                border-bottom: none;
-            }
             .avatar-box {
                 margin-right: 15px;
             }

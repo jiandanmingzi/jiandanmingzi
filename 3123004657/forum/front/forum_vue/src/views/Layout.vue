@@ -158,9 +158,14 @@ watch(
 const handlePostPost = () => {
     if (store.state.loginUserInfo == null) {
         store.commit('showLoginDialog', true);
+        proxy.$message.warning("请先登录！");
         return;
     }
     router.push({ path: '/newPost' });
+}
+
+const handleSearch = () => {
+    router.push({ path: '/search' });
 }
 
 onMounted(() => {
