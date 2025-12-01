@@ -15,7 +15,7 @@ const props = defineProps({
                 :userId="data.userId"
                 :width="30"
                 ></Avatar>
-                <router-link :to="'/user/' + data.userId" class="link-info">
+                <router-link :to="'/ucenter/' + data.userId" class="link-info">
                     {{ data.nickName }}
                 </router-link>
                 <el-divider direction="vertical"></el-divider>
