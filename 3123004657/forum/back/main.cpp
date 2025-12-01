@@ -2659,6 +2659,379 @@ void handleSearchUsers(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
+// POST /api/posts/id/is-liked 判断用户是否点赞某帖子
+void handleIsPostLiked(const httplib::Request &req, httplib::Response &res) {
+  // 从 cookie 获取 session_id 和 account
+  std::string session_id, cookie_account;
+  if (req.has_header("Cookie")) {
+    std::string cookie = req.get_header_value("Cookie");
+    size_t pos_id = cookie.find("session_id=");
+    if (pos_id != std::string::npos) {
+      size_t end_id = cookie.find(";", pos_id);
+      session_id = cookie.substr(pos_id + 11, end_id == std::string::npos
+                                                  ? std::string::npos
+                                                  : end_id - pos_id - 11);
+    }
+    size_t pos_acc = cookie.find("account=");
+    if (pos_acc != std::string::npos) {
+      size_t end_acc = cookie.find(";", pos_acc);
+      cookie_account = cookie.substr(pos_acc + 8, end_acc == std::string::npos
+                                                      ? std::string::npos
+                                                      : end_acc - pos_acc - 8);
+    }
+  }
+
+  auto body = nlohmann::json::parse(req.body);
+  int post_id = body.value("post_id", 0);
+
+  nlohmann::json response_json;
+  if (session_id.empty() || cookie_account.empty()) {
+    response_json["status"] = "failure";
+    response_json["message"] = "No session_id or account found, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (post_id == 0) {
+    response_json["status"] = "failure";
+    response_json["message"] = "post_id is required";
+    res.status = 400;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 校验 session_id 是否属于当前账号且未过期
+  std::string session_sql =
+      "SELECT account, expires_at FROM sessions WHERE session_id='" +
+      session_id + "';";
+  struct SessionCheck {
+    std::string account;
+    int expires_at = 0;
+    bool found = false;
+  } session_check;
+  char *session_err = nullptr;
+  int session_rc = sqlite3_exec(
+      db, session_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        auto *session_check = static_cast<SessionCheck *>(data);
+        session_check->account = argv[0] ? argv[0] : "";
+        session_check->expires_at = argv[1] ? std::stoi(argv[1]) : 0;
+        session_check->found = true;
+        return 0;
+      },
+      &session_check, &session_err);
+
+  int now = static_cast<int>(time(nullptr));
+  // 拆开判断
+  if (session_rc != SQLITE_OK) {
+    if (session_err)
+      std::cerr << "session_error: " << session_err << std::endl;
+    if (session_err)
+      sqlite3_free(session_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Session query error";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (!session_check.found) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not found";
+    res.status = 404;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.expires_at < now) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session expired, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.account != cookie_account) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not match, please login";
+    res.status = 403;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询点赞关系
+  std::string sql = "SELECT COUNT(*) FROM user_likes WHERE account='" +
+                    cookie_account +
+                    "' AND post_id=" + std::to_string(post_id) + ";";
+  char *err_msg = nullptr;
+  int like_count = 0;
+  int rc = sqlite3_exec(
+      db, sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *like_count = static_cast<int *>(data);
+        *like_count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &like_count, &err_msg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "is_post_liked_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Database error";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["is_liked"] = (like_count > 0);
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
+// POST /api/posts/id/is-favorited 判断用户是否收藏某帖子
+void handleIsPostFavorited(const httplib::Request &req,
+                           httplib::Response &res) {
+  // 从 cookie 获取 session_id 和 account
+  std::string session_id, cookie_account;
+  if (req.has_header("Cookie")) {
+    std::string cookie = req.get_header_value("Cookie");
+    size_t pos_id = cookie.find("session_id=");
+    if (pos_id != std::string::npos) {
+      size_t end_id = cookie.find(";", pos_id);
+      session_id = cookie.substr(pos_id + 11, end_id == std::string::npos
+                                                  ? std::string::npos
+                                                  : end_id - pos_id - 11);
+    }
+    size_t pos_acc = cookie.find("account=");
+    if (pos_acc != std::string::npos) {
+      size_t end_acc = cookie.find(";", pos_acc);
+      cookie_account = cookie.substr(pos_acc + 8, end_acc == std::string::npos
+                                                      ? std::string::npos
+                                                      : end_acc - pos_acc - 8);
+    }
+  }
+
+  auto body = nlohmann::json::parse(req.body);
+  int post_id = body.value("post_id", 0);
+
+  nlohmann::json response_json;
+  if (session_id.empty() || cookie_account.empty()) {
+    response_json["status"] = "failure";
+    response_json["message"] = "No session_id or account found, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (post_id == 0) {
+    response_json["status"] = "failure";
+    response_json["message"] = "post_id is required";
+    res.status = 400;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 校验 session_id 是否属于当前账号且未过期
+  std::string session_sql =
+      "SELECT account, expires_at FROM sessions WHERE session_id='" +
+      session_id + "';";
+  struct SessionCheck {
+    std::string account;
+    int expires_at = 0;
+    bool found = false;
+  } session_check;
+  char *session_err = nullptr;
+  int session_rc = sqlite3_exec(
+      db, session_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        auto *session_check = static_cast<SessionCheck *>(data);
+        session_check->account = argv[0] ? argv[0] : "";
+        session_check->expires_at = argv[1] ? std::stoi(argv[1]) : 0;
+        session_check->found = true;
+        return 0;
+      },
+      &session_check, &session_err);
+
+  int now = static_cast<int>(time(nullptr));
+  // 拆开判断
+  if (session_rc != SQLITE_OK) {
+    if (session_err)
+      std::cerr << "session_error: " << session_err << std::endl;
+    if (session_err)
+      sqlite3_free(session_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Session query error";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (!session_check.found) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not found";
+    res.status = 404;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.expires_at < now) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session expired, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.account != cookie_account) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not match, please login";
+    res.status = 403;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询收藏关系
+  std::string sql = "SELECT COUNT(*) FROM user_favorites WHERE account='" +
+                    cookie_account +
+                    "' AND post_id=" + std::to_string(post_id) + ";";
+  char *err_msg = nullptr;
+  int favorite_count = 0;
+  int rc = sqlite3_exec(
+      db, sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *favorite_count = static_cast<int *>(data);
+        *favorite_count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &favorite_count, &err_msg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "is_post_favorited_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Database error";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["is_favorited"] = (favorite_count > 0);
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
+// POST /api/comments/id/is-liked 判断用户是否点赞某评论
+void handleIsCommentLiked(const httplib::Request &req, httplib::Response &res) {
+  // 从 cookie 获取 session_id 和 account
+  std::string session_id, cookie_account;
+  if (req.has_header("Cookie")) {
+    std::string cookie = req.get_header_value("Cookie");
+    size_t pos_id = cookie.find("session_id=");
+    if (pos_id != std::string::npos) {
+      size_t end_id = cookie.find(";", pos_id);
+      session_id = cookie.substr(pos_id + 11, end_id == std::string::npos
+                                                  ? std::string::npos
+                                                  : end_id - pos_id - 11);
+    }
+    size_t pos_acc = cookie.find("account=");
+    if (pos_acc != std::string::npos) {
+      size_t end_acc = cookie.find(";", pos_acc);
+      cookie_account = cookie.substr(pos_acc + 8, end_acc == std::string::npos
+                                                      ? std::string::npos
+                                                      : end_acc - pos_acc - 8);
+    }
+  }
+
+  auto body = nlohmann::json::parse(req.body);
+  int comment_id = body.value("comment_id", 0);
+
+  nlohmann::json response_json;
+  if (session_id.empty() || cookie_account.empty()) {
+    response_json["status"] = "failure";
+    response_json["message"] = "No session_id or account found, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (comment_id == 0) {
+    response_json["status"] = "failure";
+    response_json["message"] = "comment_id is required";
+    res.status = 400;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 校验 session_id 是否属于当前账号且未过期
+  std::string session_sql =
+      "SELECT account, expires_at FROM sessions WHERE session_id='" +
+      session_id + "';";
+  struct SessionCheck {
+    std::string account;
+    int expires_at = 0;
+    bool found = false;
+  } session_check;
+  char *session_err = nullptr;
+  int session_rc = sqlite3_exec(
+      db, session_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        auto *session_check = static_cast<SessionCheck *>(data);
+        session_check->account = argv[0] ? argv[0] : "";
+        session_check->expires_at = argv[1] ? std::stoi(argv[1]) : 0;
+        session_check->found = true;
+        return 0;
+      },
+      &session_check, &session_err);
+
+  int now = static_cast<int>(time(nullptr));
+  // 拆开判断
+  if (session_rc != SQLITE_OK) {
+    if (session_err)
+      std::cerr << "session_error: " << session_err << std::endl;
+    if (session_err)
+      sqlite3_free(session_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Session query error";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (!session_check.found) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not found";
+    res.status = 404;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.expires_at < now) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session expired, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.account != cookie_account) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not match, please login";
+    res.status = 403;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询点赞关系
+  std::string sql = "SELECT COUNT(*) FROM comment_likes WHERE account='" +
+                    cookie_account +
+                    "' AND comment_id=" + std::to_string(comment_id) + ";";
+  char *err_msg = nullptr;
+  int like_count = 0;
+  int rc = sqlite3_exec(
+      db, sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *like_count = static_cast<int *>(data);
+        *like_count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &like_count, &err_msg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "is_comment_liked_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Database error";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["is_liked"] = (like_count > 0);
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
 } // namespace UserAPI
 namespace PostAPI {
 // POST /api/posts - 获取帖子列表，置顶优先，其次时间降序，支持分页和筛选
@@ -6281,11 +6654,32 @@ void handleResetUserPassword(const httplib::Request &req,
     response_json["status"] = "failure";
     response_json["message"] = "Failed to reset user password";
     res.status = 500;
-  } else {
-    response_json["status"] = "success";
-    response_json["message"] = "Password reset to 123456";
-    res.status = 200;
+    res.set_content(response_json.dump(), "application/json");
+    return;
   }
+
+  // 删除该账号所有session
+  std::string del_session_sql =
+      "DELETE FROM sessions WHERE account='" + account + "';";
+  rc = sqlite3_exec(db, del_session_sql.c_str(), nullptr, nullptr, &err_msg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "delete_user_session_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Password reset, but failed to remove sessions";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 清除cookie
+  res.set_header("Set-Cookie",
+                 "session_id=deleted; Path=/; Max-Age=0; HttpOnly");
+  res.set_header("Set-Cookie", "account=deleted; Path=/; Max-Age=0; HttpOnly");
+
+  response_json["status"] = "success";
+  response_json["message"] = "Password reset to 123456";
+  res.status = 200;
   res.set_content(response_json.dump(), "application/json");
 }
 // DELETE /api/admin/users/id - 删除用户
@@ -6407,9 +6801,26 @@ void handleDeleteUser(const httplib::Request &req, httplib::Response &res) {
   // json:{"account":"xxx"}
   auto body = nlohmann::json::parse(req.body);
   std::string account = body["account"];
-  std::string sql = "DELETE FROM users WHERE account='" + account + "';";
+
+  // 删除该账号所有session
+  std::string del_session_sql =
+      "DELETE FROM sessions WHERE account='" + account + "';";
   char *err_msg = nullptr;
-  int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+  int rc =
+      sqlite3_exec(db, del_session_sql.c_str(), nullptr, nullptr, &err_msg);
+  if (rc != SQLITE_OK) {
+    std::cerr << "delete_user_session_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to remove user sessions";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 删除用户
+  std::string sql = "DELETE FROM users WHERE account='" + account + "';";
+  rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (rc != SQLITE_OK) {
     std::cerr << "delete_user_error: " << err_msg << std::endl;
@@ -6418,6 +6829,11 @@ void handleDeleteUser(const httplib::Request &req, httplib::Response &res) {
     response_json["message"] = "Failed to delete user";
     res.status = 500;
   } else {
+    // 清除cookie
+    res.set_header("Set-Cookie",
+                   "session_id=deleted; Path=/; Max-Age=0; HttpOnly");
+    res.set_header("Set-Cookie",
+                   "account=deleted; Path=/; Max-Age=0; HttpOnly");
     response_json["status"] = "success";
     response_json["message"] = "User deleted successfully";
     res.status = 200;
@@ -6772,12 +7188,35 @@ void handleToggleBanUser(const httplib::Request &req, httplib::Response &res) {
     response_json["status"] = "failure";
     response_json["message"] = "Failed to toggle user ban status";
     res.status = 500;
-  } else {
-    response_json["status"] = "success";
-    response_json["message"] = new_ban_status ? "User banned successfully"
-                                              : "User unbanned successfully";
-    res.status = 200;
+    res.set_content(response_json.dump(), "application/json");
+    return;
   }
+
+  // 如果是封禁操作，移除该账号所有session并清除cookie
+  if (new_ban_status == 1) {
+    std::string del_session_sql =
+        "DELETE FROM sessions WHERE account='" + account + "';";
+    rc = sqlite3_exec(db, del_session_sql.c_str(), nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+      std::cerr << "delete_user_session_error: " << err_msg << std::endl;
+      sqlite3_free(err_msg);
+      response_json["status"] = "failure";
+      response_json["message"] = "User banned, but failed to remove sessions";
+      res.status = 500;
+      res.set_content(response_json.dump(), "application/json");
+      return;
+    }
+    // 清除cookie
+    res.set_header("Set-Cookie",
+                   "session_id=deleted; Path=/; Max-Age=0; HttpOnly");
+    res.set_header("Set-Cookie",
+                   "account=deleted; Path=/; Max-Age=0; HttpOnly");
+  }
+
+  response_json["status"] = "success";
+  response_json["message"] = new_ban_status ? "User banned successfully"
+                                            : "User unbanned successfully";
+  res.status = 200;
   res.set_content(response_json.dump(), "application/json");
 }
 // DELETE /api/admin/posts/id - 硬删除帖子
@@ -8231,6 +8670,9 @@ int main() {
   svr.Delete("/api/notifications/read",
              UserAPI::handleDeleteAllReadNotifications);
   svr.Delete("/api/notifications/id", UserAPI::handleDeleteNotification);
+  svr.Post("/api/posts/id/is-liked", UserAPI::handleIsPostLiked);
+  svr.Post("/api/posts/id/is-favorited", UserAPI::handleIsPostFavorited);
+  svr.Post("/api/comments/id/is-liked", UserAPI::handleIsCommentLiked);
 
   // 帖子接口
   svr.Post("/api/posts", PostAPI::handleCreatePost);
