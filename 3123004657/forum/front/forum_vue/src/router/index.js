@@ -49,6 +49,11 @@ const router = createRouter({
         component: () => import('@/views/NoticeCenter.vue'),
       },
       {
+        path:'/personalCenter',
+        name:'个人中心',
+        component: () => import('@/views/Ucenter.vue'),
+      },
+      {
         path: '/ucenter/:userId',
         name: '用户中心',
         component: () => import('@/views/Ucenter.vue'),

@@ -35,7 +35,7 @@ const initScroll = () => {
 
 const getUserInfo = async () => {
     let result = await proxy.Request({
-        url: '/user/getLoginUserInfo',
+        url: '/users/id',
         dataType: "json",
         method: 'get',
     });
@@ -164,6 +164,24 @@ const handlePostPost = () => {
     router.push({ path: '/newPost' });
 }
 
+const goToPersonalCenter = () => {
+    if (store.state.loginUserInfo == null) {
+        store.commit('showLoginDialog', true);
+        proxy.$message.warning("请先登录！");
+        return;
+    }
+    router.push({ path: '/personalCenter' });
+}
+
+const goToNoticeCenter = () => {
+    if (store.state.loginUserInfo == null) {
+        store.commit('showLoginDialog', true);
+        proxy.$message.warning("请先登录！");
+        return;
+    }
+    router.push({ path: '/notice' });
+}
+
 const handleSearch = () => {
     router.push({ path: '/search' });
 }
@@ -198,7 +216,7 @@ onMounted(() => {
                     </el-button>
                     <div v-if="userInfo.userId">
                         <div class="message-info">
-                            <el-dropdown class="message-dropdown">
+                            <el-dropdown class="message-dropdown" @click="goToNoticeCenter()">
                                 <el-badge 
                                     :value="12"
                                     class="item"
@@ -221,8 +239,8 @@ onMounted(() => {
                                 <avatar :userId="userInfo.userId"></avatar>
                                 <template #dropdown>
                                         <el-dropdown-menu>
-                                        <el-dropdown-item>个人主页</el-dropdown-item>
-                                        <el-dropdown-item>退出登录</el-dropdown-item>
+                                        <el-dropdown-item @click="goToPersonalCenter()">个人主页</el-dropdown-item>
+                                        <el-dropdown-item @click="logout()">退出登录</el-dropdown-item>
                                     </el-dropdown-menu>
                                 </template>
                             </el-dropdown>

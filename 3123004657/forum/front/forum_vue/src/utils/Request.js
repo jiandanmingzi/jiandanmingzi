@@ -7,7 +7,7 @@ const contentTypeForm = "application/x-www-form-urlencoded;charset=UTF-8";
 const contentTypeJson = "application/json;charset=UTF-8";
 
 const instance = axios.create({
-    baseURL:"http://localhost:8080/api",
+    baseURL:"/api",
     timeout:1*1000
 })
 

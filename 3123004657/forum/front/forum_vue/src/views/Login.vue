@@ -17,7 +17,7 @@ const dialogConfig = reactive({
     show:false,
     title:"标题",
 });
-
+ 
 //设置表单标题
 const setFormTitle = (type) => {
     if (type == 1) {
@@ -82,8 +82,8 @@ const rules = {
 
 //接口地址
 const api = {
-    login:"/api/auth/login",
-    changePassword:"/api/users/id/password"
+    login:"/auth/login",
+    changePassword:"/users/id/password"
 }
 
 //提交表单
