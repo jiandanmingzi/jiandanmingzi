@@ -103,3 +103,23 @@ CREATE TABLE IF NOT EXISTS sessions (
     is_admin INTEGER NOT NULL,
     expires_at INTEGER NOT NULL
 );
+生成windows可执行:
+# 1. 清理旧构建 (必须做，否则缓存会保留 Linux 的设置)
+rm -rf build_win
+# 2. 配置 (新增了 -DCMAKE_SYSTEM_NAME=Windows)
+cmake -B build_win \
+  -DCMAKE_SYSTEM_NAME=Windows \
+  -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=x64-mingw-static \
+  -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+  -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++
+# 3. 编译
+cmake --build build_win
+生成linux可执行:
+# 1. 清理旧构建
+rm -rf build_linux
+# 2. 配置 (使用默认的 Linux 编译器，如 GCC 或 Clang)
+cmake -B build_linux \
+  -DCMAKE_TOOLCHAIN_FILE=$HOME/vcpkg/scripts/buildsystems/vcpkg.cmake
+# 3. 编译
+cmake --build build_linux
