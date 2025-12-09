@@ -60,7 +60,7 @@ EQUALS = =
 CMAKE_SOURCE_DIR = /home/h3123004660/CODE
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/h3123004660/CODE/build_win
+CMAKE_BINARY_DIR = /home/h3123004660/CODE/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/h3123004660/CODE/build_win/CMakeFiles /home/h3123004660/CODE/build_win//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/h3123004660/CODE/build/CMakeFiles /home/h3123004660/CODE/build//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/h3123004660/CODE/build_win/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/h3123004660/CODE/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -129,13 +129,13 @@ main/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/build
 .PHONY : main/fast
 
-main.obj: main.cpp.obj
-.PHONY : main.obj
+main.o: main.cpp.o
+.PHONY : main.o
 
 # target to build an object file
-main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/main.cpp.obj
-.PHONY : main.cpp.obj
+main.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/main.dir/build.make CMakeFiles/main.dir/main.cpp.o
+.PHONY : main.cpp.o
 
 main.i: main.cpp.i
 .PHONY : main.i
@@ -162,7 +162,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... main"
-	@echo "... main.obj"
+	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
 .PHONY : help

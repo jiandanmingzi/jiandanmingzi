@@ -6026,6 +6026,130 @@ void handleGetCommentDetail(const httplib::Request &req,
   }
   res.set_content(response_json.dump(), "application/json");
 }
+// POST /api/comments/child/count - 获取子评论数量
+void handleGetChildCommentCount(const httplib::Request &req,
+                                httplib::Response &res) {
+  // 从 cookie 获取 session_id 和 account
+  std::string session_id, cookie_account;
+  if (req.has_header("Cookie")) {
+    std::string cookie = req.get_header_value("Cookie");
+    size_t pos_id = cookie.find("session_id=");
+    if (pos_id != std::string::npos) {
+      size_t end_id = cookie.find(";", pos_id);
+      session_id = cookie.substr(pos_id + 11, end_id == std::string::npos
+                                                  ? std::string::npos
+                                                  : end_id - pos_id - 11);
+    }
+    size_t pos_acc = cookie.find("account=");
+    if (pos_acc != std::string::npos) {
+      size_t end_acc = cookie.find(";", pos_acc);
+      cookie_account = cookie.substr(pos_acc + 8, end_acc == std::string::npos
+                                                      ? std::string::npos
+                                                      : end_acc - pos_acc - 8);
+    }
+  }
+
+  auto body = nlohmann::json::parse(req.body);
+  int parent_id = body.value("parent_id", 0);
+
+  nlohmann::json response_json;
+  if (parent_id == 0) {
+    response_json["status"] = "failure";
+    response_json["message"] = "parent_id is required";
+    res.status = 400;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  if (session_id.empty() || cookie_account.empty()) {
+    response_json["status"] = "failure";
+    response_json["message"] = "No session_id or account found, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  // 校验 session_id 是否属于当前账号且未过期
+  std::string session_sql =
+      "SELECT account, expires_at FROM sessions WHERE session_id='" +
+      session_id + "';";
+  struct SessionCheck {
+    std::string account;
+    int expires_at = 0;
+    bool found = false;
+  } session_check;
+  char *session_err = nullptr;
+  int session_rc = sqlite3_exec(
+      db, session_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        auto *session_check = static_cast<SessionCheck *>(data);
+        session_check->account = argv[0] ? argv[0] : "";
+        session_check->expires_at = argv[1] ? std::stoi(argv[1]) : 0;
+        session_check->found = true;
+        return 0;
+      },
+      &session_check, &session_err);
+
+  int now = static_cast<int>(time(nullptr));
+  if (session_rc != SQLITE_OK) {
+    if (session_err)
+      std::cerr << "session_error: " << session_err << std::endl;
+    if (session_err)
+      sqlite3_free(session_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Session query error";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (!session_check.found) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not found";
+    res.status = 404;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.expires_at < now) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session expired, please login";
+    res.status = 401;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+  if (session_check.account != cookie_account) {
+    response_json["status"] = "failure";
+    response_json["message"] = "Session not match, please login";
+    res.status = 403;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询子评论数量
+  std::string sql = "SELECT COUNT(*) FROM comments WHERE parent_id=" +
+                    std::to_string(parent_id) + " AND is_deleted=0;";
+  char *err_msg = nullptr;
+  int count = 0;
+  int rc = sqlite3_exec(
+      db, sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &count, &err_msg);
+
+  if (rc != SQLITE_OK) {
+    std::cerr << "get_child_comment_count_error: " << err_msg << std::endl;
+    sqlite3_free(err_msg);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve child comment count";
+    res.status = 500;
+  } else {
+    response_json["status"] = "success";
+    response_json["data"] = {{"count", count}};
+    res.status = 200;
+  }
+  res.set_content(response_json.dump(), "application/json");
+}
 } // namespace CommentAPI
 //管理员接口
 namespace AdminAPI {
@@ -8697,6 +8821,7 @@ int main() {
   svr.Delete("/api/comments/id", CommentAPI::handleDeleteComment);
   svr.Post("/api/comments/id/like", CommentAPI::handleToggleCommentLike);
   svr.Post("/api/comments/detail", CommentAPI::handleGetCommentDetail);
+  svr.Post("/api/comments/child/count", CommentAPI::handleGetChildCommentCount);
 
   // 通知接口
   svr.Get("/api/notifications", UserAPI::handleGetNotifications);

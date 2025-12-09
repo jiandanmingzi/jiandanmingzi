@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/home/h3123004660/CODE/build",
+  "command": "/usr/bin/clang++  -I/home/h3123004660/CODE/include -isystem /home/h3123004660/vcpkg/installed/x64-linux/include -std=gnu++14 -o CMakeFiles/main.dir/main.cpp.o -c /home/h3123004660/CODE/main.cpp",
+  "file": "/home/h3123004660/CODE/main.cpp"
+}
+]

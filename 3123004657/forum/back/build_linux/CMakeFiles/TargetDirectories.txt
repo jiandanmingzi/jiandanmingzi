@@ -1,3 +1,0 @@
-/home/h3123004660/CODE/build_linux/CMakeFiles/main.dir
-/home/h3123004660/CODE/build_linux/CMakeFiles/edit_cache.dir
-/home/h3123004660/CODE/build_linux/CMakeFiles/rebuild_cache.dir
