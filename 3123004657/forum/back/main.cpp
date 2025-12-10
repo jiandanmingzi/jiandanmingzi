@@ -756,7 +756,41 @@ void handleGetUserPosts(const httplib::Request &req, httplib::Response &res) {
     return;
   }
 
-  // 用 cookie_account 查询该用户的帖子
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM posts WHERE account='" +
+                          cookie_account + "' AND is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_user_posts_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve post count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 用 cookie_account 查询该用户的帖子（分页）
   std::string sql =
       "SELECT p.post_id, p.title, SUBSTR(p.content, 1, 100) as summary, "
       "u.username, u.grade, u.major, u.role, p.category, p.is_anonymous, "
@@ -766,7 +800,9 @@ void handleGetUserPosts(const httplib::Request &req, httplib::Response &res) {
       "WHERE p.account='" +
       cookie_account +
       "' AND p.is_deleted=0 "
-      "ORDER BY p.created_at DESC;";
+      "ORDER BY p.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct PostInfo {
@@ -838,6 +874,9 @@ void handleGetUserPosts(const httplib::Request &req, httplib::Response &res) {
                             {"created_at", post.created_at}});
     }
     response_json["data"] = posts_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -1044,14 +1083,53 @@ void handleGetUserComments(const httplib::Request &req,
     return;
   }
 
-  // 用 cookie_account 查询该用户的评论
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM comments WHERE account='" +
+                          cookie_account + "' AND is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_user_comments_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve comment count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 用 cookie_account 查询该用户的评论（分页）
   std::string sql =
       "SELECT c.comment_id, c.post_id, c.content, c.parent_id, c.like_count, "
       "c.created_at, u.username, c.is_anonymous "
       "FROM comments c "
       "LEFT JOIN users u ON c.account = u.account "
       "WHERE c.account='" +
-      cookie_account + "' AND c.is_deleted=0;";
+      cookie_account +
+      "' AND c.is_deleted=0 "
+      "ORDER BY c.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
+
   char *err_msg = nullptr;
   struct CommentInfo {
     int comment_id;
@@ -1103,6 +1181,9 @@ void handleGetUserComments(const httplib::Request &req,
                                {"username", display_username}});
     }
     response_json["data"] = comments_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -1195,7 +1276,43 @@ void handleGetUserFavorites(const httplib::Request &req,
     return;
   }
 
-  // 用 cookie_account 查询收藏帖子
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM user_favorites uf "
+                          "JOIN posts p ON uf.post_id = p.post_id "
+                          "WHERE uf.account='" +
+                          cookie_account + "' AND p.is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_user_favorites_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve favorite count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 用 cookie_account 查询收藏帖子（分页）
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, "
       "SUBSTR(p.content, 1, 100) as summary, "
@@ -1207,7 +1324,9 @@ void handleGetUserFavorites(const httplib::Request &req,
       "WHERE uf.account='" +
       cookie_account +
       "' AND p.is_deleted=0 "
-      "ORDER BY uf.created_at DESC;";
+      "ORDER BY uf.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct PostInfo {
@@ -1285,6 +1404,9 @@ void handleGetUserFavorites(const httplib::Request &req,
       favorites_json.push_back(item);
     }
     response_json["data"] = favorites_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -1376,7 +1498,43 @@ void handleGetUserLikes(const httplib::Request &req, httplib::Response &res) {
     return;
   }
 
-  // 用 cookie_account 查询点赞的帖子
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM user_likes ul "
+                          "JOIN posts p ON ul.post_id = p.post_id "
+                          "WHERE ul.account='" +
+                          cookie_account + "' AND p.is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_user_likes_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve like count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 用 cookie_account 查询点赞的帖子（分页）
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, "
       "SUBSTR(p.content, 1, 100) as summary, "
@@ -1388,7 +1546,9 @@ void handleGetUserLikes(const httplib::Request &req, httplib::Response &res) {
       "WHERE ul.account='" +
       cookie_account +
       "' AND p.is_deleted=0 "
-      "ORDER BY ul.created_at DESC;";
+      "ORDER BY ul.created_at DESC "
+      "LIMIT " +
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct PostInfo {
@@ -1478,6 +1638,9 @@ void handleGetUserLikes(const httplib::Request &req, httplib::Response &res) {
       }
     }
     response_json["data"] = likes_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -1570,7 +1733,42 @@ void handleGetNotifications(const httplib::Request &req,
     return;
   }
 
-  // 查询通知
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql =
+      "SELECT COUNT(*) FROM notifications WHERE receiver_account='" +
+      cookie_account + "';";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_notifications_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve notification count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询通知（分页）
   std::string sql = "SELECT n.notification_id, n.sender_account, u.username, "
                     "n.type, n.related_id, n.content, n.is_read, n.created_at "
                     "FROM notifications n "
@@ -1578,7 +1776,10 @@ void handleGetNotifications(const httplib::Request &req,
                     "WHERE n.receiver_account='" +
                     cookie_account +
                     "' "
-                    "ORDER BY n.created_at DESC;";
+                    "ORDER BY n.created_at DESC "
+                    "LIMIT " +
+                    std::to_string(page_size) + " OFFSET " +
+                    std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct NotificationInfo {
@@ -1632,6 +1833,9 @@ void handleGetNotifications(const httplib::Request &req,
            {"created_at", notification.created_at}});
     }
     response_json["data"] = notifications_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -2425,7 +2629,44 @@ void handleGetUserCommentLikes(const httplib::Request &req,
     return;
   }
 
-  // 查询用户点赞的评论，只允许本人查询
+  // 获取分页参数
+  int page = 1, page_size = 10;
+  if (!req.body.empty()) {
+    auto body = nlohmann::json::parse(req.body);
+    page = body.value("page", 1);
+    page_size = body.value("page_size", 10);
+  }
+  int offset = (page - 1) * page_size;
+
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM comment_likes cl "
+                          "JOIN comments c ON cl.comment_id = c.comment_id "
+                          "WHERE cl.account='" +
+                          cookie_account + "' AND c.is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_user_comment_likes_count_error: " << count_err
+              << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve liked comment count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询用户点赞的评论，只允许本人查询（分页）
   std::string sql = "SELECT c.comment_id, c.post_id, c.content, "
                     "COALESCE(c.parent_id, 0) as parent_id, "
                     "c.like_count, c.created_at, u.username, c.is_anonymous "
@@ -2435,7 +2676,10 @@ void handleGetUserCommentLikes(const httplib::Request &req,
                     "WHERE cl.account='" +
                     cookie_account +
                     "' AND c.is_deleted=0 "
-                    "ORDER BY cl.created_at DESC;";
+                    "ORDER BY cl.created_at DESC "
+                    "LIMIT " +
+                    std::to_string(page_size) + " OFFSET " +
+                    std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct CommentInfo {
@@ -2488,6 +2732,9 @@ void handleGetUserCommentLikes(const httplib::Request &req,
                                {"created_at", comment.created_at}});
     }
     response_json["data"] = comments_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -3034,7 +3281,7 @@ void handleIsCommentLiked(const httplib::Request &req, httplib::Response &res) {
 }
 } // namespace UserAPI
 namespace PostAPI {
-// POST /api/posts - 获取帖子列表，置顶优先，其次时间降序，支持分页和筛选
+// POST /api/posts - 获取帖子列表,置顶优先,其次时间降序,支持分页和筛选
 void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
   // 从 cookie 获取 session_id 和 account
   std::string session_id, cookie_account;
@@ -3128,6 +3375,44 @@ void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
     return;
   }
 
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM posts p "
+                          "LEFT JOIN users u ON p.account = u.account "
+                          "WHERE p.is_deleted=0";
+
+  if (!major.empty())
+    count_sql += " AND u.major='" + major + "'";
+  if (!grade.empty())
+    count_sql += " AND u.grade='" + grade + "'";
+  if (!role.empty())
+    count_sql += " AND u.role='" + role + "'";
+  if (!category.empty())
+    count_sql += " AND p.category='" + category + "'";
+  count_sql += ";";
+
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_posts_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve post count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询帖子列表
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, SUBSTR(p.content, 1, "
       "100) as summary, "
@@ -3225,6 +3510,9 @@ void handleGetPosts(const httplib::Request &req, httplib::Response &res) {
       posts_json.push_back(item);
     }
     response_json["data"] = posts_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -3869,7 +4157,31 @@ void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
     page_size = std::stoi(req.get_param_value("page_size"));
   int offset = (page - 1) * page_size;
 
-  // 添加分页功能
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM posts WHERE is_deleted=0;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_hot_posts_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve hot post count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询热门帖子（分页）
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, "
       "SUBSTR(p.content, 1, 100) as summary, "
@@ -3880,8 +4192,7 @@ void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
       "WHERE p.is_deleted=0 "
       "ORDER BY p.view_count DESC, p.like_count DESC "
       "LIMIT " +
-      std::to_string(page_size) + " OFFSET " + std::to_string(offset) +
-      ";"; // 分页
+      std::to_string(page_size) + " OFFSET " + std::to_string(offset) + ";";
 
   char *err_msg = nullptr;
   struct PostInfo {
@@ -3960,9 +4271,9 @@ void handleGetHotPosts(const httplib::Request &req, httplib::Response &res) {
       posts_json.push_back(item);
     }
     response_json["data"] = posts_json;
-    response_json["page"] = page;           // 当前页码
-    response_json["page_size"] = page_size; // 每页数量
-    response_json["count"] = posts.size();  // 当前页数量
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -4052,7 +4363,7 @@ void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
     return;
   }
 
-  // 分页参数，支持 json body 或 url 参数
+  // 分页参数,支持 json body 或 url 参数
   int page = 1, page_size = 10;
   if (!req.body.empty()) {
     auto body = nlohmann::json::parse(req.body);
@@ -4065,7 +4376,32 @@ void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
     page_size = std::stoi(req.get_param_value("page_size"));
   int offset = (page - 1) * page_size;
 
-  // 添加分页功能
+  // 先查询总数
+  std::string count_sql =
+      "SELECT COUNT(*) FROM posts WHERE is_deleted=0 AND is_top=1;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_pinned_posts_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve pinned post count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询置顶帖子(分页)
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, SUBSTR(p.content, 1, "
       "100) as summary, "
@@ -4153,9 +4489,9 @@ void handleGetPinnedPosts(const httplib::Request &req, httplib::Response &res) {
       posts_json.push_back(item);
     }
     response_json["data"] = posts_json;
-    response_json["page"] = page;           // 当前页码
-    response_json["page_size"] = page_size; // 每页数量
-    response_json["count"] = posts.size();  // 当前页数量
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -4778,6 +5114,33 @@ void handleGetParentComments(const httplib::Request &req,
     return;
   }
 
+  // 先查询总数
+  std::string count_sql =
+      "SELECT COUNT(*) FROM comments WHERE post_id=" + std::to_string(post_id) +
+      " AND is_deleted=0 AND (parent_id IS NULL OR parent_id=0);";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_parent_comments_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve parent comment count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询父评论列表（分页）
   std::string sql =
       "SELECT c.comment_id, c.account, u.username, c.content, "
       "COALESCE(c.parent_id, 0) as parent_id, "
@@ -4843,6 +5206,9 @@ void handleGetParentComments(const httplib::Request &req,
       comments_json.push_back(item);
     }
     response_json["data"] = comments_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -5100,6 +5466,34 @@ void handleGetParentCommentsByLikes(const httplib::Request &req,
     return;
   }
 
+  // 先查询总数
+  std::string count_sql =
+      "SELECT COUNT(*) FROM comments WHERE post_id=" + std::to_string(post_id) +
+      " AND is_deleted=0 AND (parent_id IS NULL OR parent_id=0);";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_parent_comments_by_likes_count_error: " << count_err
+              << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve parent comment count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询父评论列表（分页）
   std::string sql =
       "SELECT c.comment_id, c.account, u.username, c.content, "
       "COALESCE(c.parent_id, 0) as parent_id, "
@@ -5165,6 +5559,9 @@ void handleGetParentCommentsByLikes(const httplib::Request &req,
       comments_json.push_back(item);
     }
     response_json["data"] = comments_json;
+    response_json["page"] = page;
+    response_json["page_size"] = page_size;
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -6964,7 +7361,7 @@ void handleDeleteUser(const httplib::Request &req, httplib::Response &res) {
   }
   res.set_content(response_json.dump(), "application/json");
 }
-// POST /api/admin/users - 获取所有用户（account排序）
+// POST /api/admin/users - 获取所有用户(account排序)
 void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
   // 从 cookie 获取 session_id 和 account
   std::string session_id, cookie_account;
@@ -6994,7 +7391,7 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
     res.set_content(response_json.dump(), "application/json");
     return;
   }
-  // 校验 session_id 是否属于当前账号且未过期，并且是管理员
+  // 校验 session_id 是否属于当前账号且未过期,并且是管理员
   std::string session_sql =
       "SELECT account, expires_at FROM sessions WHERE session_id='" +
       session_id + "';";
@@ -7086,6 +7483,31 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
   int page_size = body.value("page_size", 10);
   int offset = (page - 1) * page_size;
 
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM users;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_users_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve user count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询用户列表(分页)
   std::string sql =
       "SELECT account, username, bio, major, grade, role, is_admin, "
       "is_online, is_banned, last_login_attempt, last_login_time "
@@ -7154,7 +7576,7 @@ void handleGetAllUsers(const httplib::Request &req, httplib::Response &res) {
     response_json["data"] = users_json;
     response_json["page"] = page;
     response_json["page_size"] = page_size;
-    response_json["count"] = users.size();
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -8071,6 +8493,31 @@ void handleGetDeletedPosts(const httplib::Request &req,
   }
   int offset = (page - 1) * page_size;
 
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM posts WHERE is_deleted=1;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_deleted_posts_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve deleted post count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询软删除的帖子列表（分页）
   std::string sql =
       "SELECT p.post_id, p.account, u.username, p.title, SUBSTR(p.content, 1, "
       "100) as summary, "
@@ -8156,7 +8603,7 @@ void handleGetDeletedPosts(const httplib::Request &req,
     response_json["data"] = posts_json;
     response_json["page"] = page;
     response_json["page_size"] = page_size;
-    response_json["count"] = posts.size();
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
@@ -8192,7 +8639,7 @@ void handleGetDeletedComments(const httplib::Request &req,
     res.set_content(response_json.dump(), "application/json");
     return;
   }
-  // 校验 session_id 是否属于当前账号且未过期，并且是管理员
+  // 校验 session_id 是否属于当前账号且未过期,并且是管理员
   std::string session_sql =
       "SELECT account, expires_at FROM sessions WHERE session_id='" +
       session_id + "';";
@@ -8287,6 +8734,31 @@ void handleGetDeletedComments(const httplib::Request &req,
   }
   int offset = (page - 1) * page_size;
 
+  // 先查询总数
+  std::string count_sql = "SELECT COUNT(*) FROM comments WHERE is_deleted=1;";
+  char *count_err = nullptr;
+  int total_count = 0;
+  int count_rc = sqlite3_exec(
+      db, count_sql.c_str(),
+      [](void *data, int argc, char **argv, char **azColName) -> int {
+        int *count = static_cast<int *>(data);
+        *count = argv[0] ? std::stoi(argv[0]) : 0;
+        return 0;
+      },
+      &total_count, &count_err);
+
+  if (count_rc != SQLITE_OK) {
+    std::cerr << "get_deleted_comments_count_error: " << count_err << std::endl;
+    if (count_err)
+      sqlite3_free(count_err);
+    response_json["status"] = "failure";
+    response_json["message"] = "Failed to retrieve deleted comment count";
+    res.status = 500;
+    res.set_content(response_json.dump(), "application/json");
+    return;
+  }
+
+  // 查询软删除的评论列表（分页）
   std::string sql =
       "SELECT c.comment_id, c.post_id, c.account, u.username, c.content, "
       "COALESCE(c.parent_id, 0) as parent_id, "
@@ -8349,7 +8821,7 @@ void handleGetDeletedComments(const httplib::Request &req,
     response_json["data"] = comments_json;
     response_json["page"] = page;
     response_json["page_size"] = page_size;
-    response_json["count"] = comments.size();
+    response_json["total_count"] = total_count;
     res.status = 200;
   }
   res.set_content(response_json.dump(), "application/json");
