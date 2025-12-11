@@ -3,7 +3,7 @@ import { dataType } from 'element-plus/es/components/table-v2/src/common';
 import { ref, reactive, getCurrentInstance, onMounted, nextTick } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter, useRoute } from 'vue-router';
-const {proxy} = getCurrentInstance();
+const { proxy } = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const opType = ref();
@@ -14,10 +14,10 @@ const formDataRef = ref();
 
 //表单弹窗配置
 const dialogConfig = reactive({
-    show:false,
-    title:"标题",
+    show: false,
+    title: "标题",
 });
- 
+
 //设置表单标题
 const setFormTitle = (type) => {
     if (type == 1) {
@@ -27,7 +27,7 @@ const setFormTitle = (type) => {
     }
 }
 //重置表单
-const resetForm = () =>{
+const resetForm = () => {
     if (!formDataRef.value) {
         return;
     }
@@ -58,43 +58,43 @@ const checkRePassword = (rule, value, callback) => {
 
 //表单校验规则
 const rules = {
-    account:[
-        {required: true, message: '请输入学号', trigger: 'blur'},
-        {max: 10, message: '学号不超过10位', trigger: 'blur'},
-        {validator: proxy.Verify.number, message: '学号仅包含数字', trigger: 'blur'}
+    account: [
+        { required: true, message: '请输入学号', trigger: 'blur' },
+        { max: 10, message: '学号不超过10位', trigger: 'blur' },
+        { validator: proxy.Verify.number, message: '学号仅包含数字', trigger: 'blur' }
     ],
-    password:[
-        {required: true, message: '请输入密码', trigger: 'blur'}
+    password: [
+        { required: true, message: '请输入密码', trigger: 'blur' }
     ],
-    orgPassword:[
-        {required: true, message: '请输入原密码', trigger: 'blur'}
+    orgPassword: [
+        { required: true, message: '请输入原密码', trigger: 'blur' }
     ],
-    newPassword:[
-        {required: true, message: '请输入新密码', trigger: 'blur'},
-        {max: 20, message: '密码不超过20位', trigger: 'blur'},
-        {min: 6, message: '密码不少于6位', trigger: 'blur'}
+    newPassword: [
+        { required: true, message: '请输入新密码', trigger: 'blur' },
+        { max: 20, message: '密码不超过20位', trigger: 'blur' },
+        { min: 6, message: '密码不少于6位', trigger: 'blur' }
     ],
-    reNewPassword:[
-        {required: true, message: '请再次输入新密码', trigger: 'blur'},
-        {validator: checkRePassword, message: '两次输入密码不一致', trigger: 'blur'}
+    reNewPassword: [
+        { required: true, message: '请再次输入新密码', trigger: 'blur' },
+        { validator: checkRePassword, message: '两次输入密码不一致', trigger: 'blur' }
     ],
 };
 
 //接口地址
 const api = {
-    login:"/auth/login",
-    changePassword:"/users/id/password"
+    login: "/auth/login",
+    changePassword: "/users/id/password"
 }
 
 //提交表单
 const doSubmit = () => {
-    formDataRef.value.validate(async(valid) => {
+    formDataRef.value.validate(async (valid) => {
         if (!valid) {
             return;
         }
-        let params ={};
+        let params = {};
         Object.assign(params, formData.value);
-        
+
         //设置url
         let url = "";
         if (opType.value == 1) {
@@ -104,8 +104,8 @@ const doSubmit = () => {
         }
 
         let result = await proxy.Request({
-            url:url,
-            params:params,
+            url: url,
+            params: params,
             dataType: 'json',
             method: opType.value == 1 ? 'post' : 'put',
         })
@@ -115,19 +115,9 @@ const doSubmit = () => {
         }
 
         if (opType.value == 1) {
-            if (params.rememberMe) {
-                const loginInfo = {
-                    account: params.account,
-                    password: params.password,
-                    rememberMe: params.rememberMe
-                }
-                proxy.VueCookies.set("loginInfo", loginInfo, "7d");
-            }else{
-                proxy.VueCookies.remove("loginInfo");
-            }
             dialogConfig.show = false;
             proxy.Message.success("登录成功");
-            store.commit('updateLoginUserInfo', result);
+            store.commit('updateHasLogin', true);
         } else {
             proxy.Message.success("密码重置成功，请使用新密码登录");
             showPanel(1);
@@ -137,33 +127,18 @@ const doSubmit = () => {
 </script>
 
 <template>
-<div>
-    <Dialog
-        :show="dialogConfig.show"
-        :title="dialogConfig.title"
-        :buttons="dialogConfig.buttons"
-        width="400px"
-        @close="dialogConfig.show = false"
-        >
-    <el-form 
-        class="login"
-        ref="formDataRef"
-        :model="formData"
-        :rules="rules"
-        >
-        <el-form-item prop="account">
-            <el-input
-                size="large"
-                clearable
-                placeholder="请输入学号"
-                v-model="formData.account"
-            >
-                <template #prefix>
-                    <span class="iconfont icon-account"></span>
-                </template>
-            </el-input>
-        </el-form-item>
-        <!--
+    <div>
+        <Dialog :show="dialogConfig.show" :title="dialogConfig.title" :buttons="dialogConfig.buttons" width="400px"
+            @close="dialogConfig.show = false">
+            <el-form class="login" ref="formDataRef" :model="formData" :rules="rules">
+                <el-form-item prop="account">
+                    <el-input size="large" clearable placeholder="请输入学号" v-model="formData.account">
+                        <template #prefix>
+                            <span class="iconfont icon-account"></span>
+                        </template>
+                    </el-input>
+                </el-form-item>
+                <!--
         <el-form-item prop="nickName" v-if="opType == 0">
             <el-input
                 size="large"
@@ -201,91 +176,55 @@ const doSubmit = () => {
             </el-input>
         </el-form-item>
         -->
-        <el-form-item prop="password" v-if="opType == 1">
-            <el-input
-                show-password
-                size="large"
-                clearable
-                placeholder="请输入密码"
-                v-model="formData.password"
-            >
-                <template #prefix>
-                    <span class="iconfont icon-password"></span>
-                </template>
-            </el-input>
-        </el-form-item>
-        <el-form-item prop="orgPassword" v-if="opType == 0">
-            <el-input
-                show-password
-                size="large"
-                clearable
-                placeholder="输入原密码"
-                v-model="formData.orgPassword"
-            >
-                <template #prefix>
-                    <span class="iconfont icon-password"></span>
-                </template>
-            </el-input>
-        </el-form-item>
-        <el-form-item prop="newPassword" v-if="opType == 0">
-            <el-input
-                show-password
-                size="large"
-                clearable
-                placeholder="输入新密码"
-                v-model="formData.newPassword"
-            >
-                <template #prefix>
-                    <span class="iconfont icon-password"></span>
-                </template>
-            </el-input>
-        </el-form-item>
-        <el-form-item prop="reNewPassword" v-if="opType == 0">
-            <el-input
-                show-password
-                size="large"
-                clearable
-                placeholder="再次输入新密码"
-                v-model="formData.reNewPassword"
-            >
-                <template #prefix>
-                    <span class="iconfont icon-password"></span>
-                </template>
-            </el-input>
-        </el-form-item>
-        <el-form-item>
-            <div class="rememberme-panel" v-if="opType == 1">
-                <el-checkbox v-model="formData.rememberMe">记住我</el-checkbox>
-            </div>
-            <div 
-                class="change-password-panel" 
-                v-if="opType == 1"
-                @click="showPanel(0)"
-                >
-                <a href="javascript:void(0)" class="a-link">重置密码</a>
-            </div>
-            <div 
-                class="go-login-panel" 
-                v-if="opType == 0"
-                @click="showPanel(1)"
-                >
-                <a href="javascript:void(0)" class="a-link">去登陆</a>
-            </div>
-        </el-form-item>    
-        <el-form-item>
-            <el-button 
-            type="primary" 
-            size="large" 
-            style="width: 100%;"
-            @click="doSubmit"
-            >
-                <span v-if="opType == 1">登 录</span>
-                <span v-else>确 定</span>
-            </el-button>
-        </el-form-item>
-    </el-form>
-    </Dialog>
-</div>
+                <el-form-item prop="password" v-if="opType == 1">
+                    <el-input show-password size="large" clearable placeholder="请输入密码" v-model="formData.password">
+                        <template #prefix>
+                            <span class="iconfont icon-password"></span>
+                        </template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item prop="orgPassword" v-if="opType == 0">
+                    <el-input show-password size="large" clearable placeholder="输入原密码" v-model="formData.orgPassword">
+                        <template #prefix>
+                            <span class="iconfont icon-password"></span>
+                        </template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item prop="newPassword" v-if="opType == 0">
+                    <el-input show-password size="large" clearable placeholder="输入新密码" v-model="formData.newPassword">
+                        <template #prefix>
+                            <span class="iconfont icon-password"></span>
+                        </template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item prop="reNewPassword" v-if="opType == 0">
+                    <el-input show-password size="large" clearable placeholder="再次输入新密码"
+                        v-model="formData.reNewPassword">
+                        <template #prefix>
+                            <span class="iconfont icon-password"></span>
+                        </template>
+                    </el-input>
+                </el-form-item>
+                <el-form-item>
+                    <div class="rememberme-panel" v-if="opType == 1">
+                        <el-checkbox v-model="formData.rememberMe">记住我</el-checkbox>
+                    </div>
+                    <div class="change-password-panel" v-if="opType == 1" @click="showPanel(0)">
+                        <a href="javascript:void(0)" class="a-link">重置密码</a>
+                    </div>
+                    <div class="go-login-panel" v-if="opType == 0" @click="showPanel(1)">
+                        <a href="javascript:void(0)" class="a-link">去登陆</a>
+                    </div>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" size="large" style="width: 100%;" @click="doSubmit">
+                        <span v-if="opType == 1">登 录</span>
+                        <span v-else>确 定</span>
+                    </el-button>
+                </el-form-item>
+            </el-form>
+        </Dialog>
+    </div>
 </template>
 
 <style scoped lang="scss">
@@ -293,15 +232,19 @@ const doSubmit = () => {
     .rememberme-panel {
         margin-right: auto
     }
+
     .change-password-panel {
         margin-left: auto;
+
         .a-link {
             text-decoration: none;
             color: #409eff
         }
     }
+
     .go-login-panel {
         margin-right: auto;
+
         .a-link {
             text-decoration: none;
             color: #409eff

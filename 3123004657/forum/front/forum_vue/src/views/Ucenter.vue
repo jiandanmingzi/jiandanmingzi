@@ -3,114 +3,141 @@ import { ref, reactive, getCurrentInstance, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import ArticleListItem from '@/views/ArticleListItem.vue';
+import { dataType } from 'element-plus/es/components/table-v2/src/common';
+import { pa } from 'element-plus/es/locale';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();
 const router = useRouter();
 const store = useStore();
 
+const postCount = ref(0);
+const loadType = ref("ucenter");
 const userId = ref(route.params.userId);
 const userInfo = ref({});
 const activeTab = ref('post');
 const articleListInfo = ref({});
 const loading = ref(false);
 
+const dialogConfig = reactive({
+    show: false,
+    title: "修改个人信息",
+    buttons: [
+        {
+            type: "primary",
+            text: "确定",
+            click: () => {
+                updateUserInfo();
+            },
+        },
+    ],
+});
+const formData = ref({});
+
 const api = {
-    getUserInfo: "/ucenter/getUserInfo",
-    loadUserArticles: "/ucenter/loadUserArticles",
+    handleGetUserInfo: "/users/id",
+    handleUpdateUserInfo: "/users/id",
+    handleGetUserPosts: "/users/id/posts",
+    handleGetUserPostCount: "/users/id/posts/count",
+    handleGetUserComments: "/users/id/comments",
+    handleGetUserFavorites: "/users/id/favorites",
+    handleGetUserLikes: "/users/id/likes",
+    handleGetUserCommentLikes: "/users/id/comment-likes",
+    handleGetUserBasicInfo: "/users/basic-info"
 };
 
-// 获取用户信息
-const loadUserInfo = async () => {
-    /*
+const getPostCount = async () => {
     let result = await proxy.Request({
-        url: api.getUserInfo,
+        url: api.handleGetUserPostCount,
+        method: "GET",
+    });
+    if (!result) {
+        return;
+    }
+    postCount.value = result.data.post_count;
+};
+
+const updateUserInfoHandler = () => {
+    formData.value = {
+        username: userInfo.value.username,
+        bio: userInfo.value.bio
+    };
+    dialogConfig.show = true;
+};
+
+const updateUserInfo = async () => {
+    let result = await proxy.Request({
+        url: api.handleUpdateUserInfo,
+        method: "PUT",
+        dataType: 'json',
         params: {
-            userId: userId.value
+            username: formData.value.username,
+            bio: formData.value.bio
         }
     });
     if (!result) {
         return;
     }
-    userInfo.value = result.data;
-    */
+    proxy.Message.success("修改成功");
+    dialogConfig.show = false;
+    loadUserInfo();
+};
 
-    // 本地模拟数据
-    console.log("Loading local user info for:", userId.value);
-    userInfo.value = {
-        userId: "12345",
-        nickName: "程序员老罗",
-        sex: 1, // 0:女, 1:男
-        personDescription: "会写前端的后端程序员，热爱技术，热爱生活。",
-        avatar: "", 
-        roleType: "student", // "student":学生, "teacher":老师
-        grade: "2020",
-        major: "计算机科学与技术",
-        postCount: 12,
-        likeCount: 123,
-        joinTime: "2023-01-01"
-    };
+// 获取用户信息
+const loadUserInfo = async () => {
+    let result;
+    if (loadType.value == "personalCenter") {
+        result = await proxy.Request({
+            url: api.handleGetUserInfo,
+            method: "GET",
+        });
+    } else {
+        result = await proxy.Request({
+            url: api.handleGetUserBasicInfo,
+            method: "POST",
+            dataType: "json",
+            params: {
+                account: userId.value
+            }
+        });
+    }
+    if (!result) {
+        return;
+    }
+    userInfo.value = result.data;
 };
 
 // 加载文章列表 (发帖/评论/收藏)
 const loadArticleList = async () => {
+    const tempApi = ref();
+    if (activeTab.value == "post") {
+        tempApi.value = api.handleGetUserPosts;
+    } else if (activeTab.value == "comment") {
+        tempApi.value = api.handleGetUserComments;
+    } else if (activeTab.value == "favourite") {
+        tempApi.value = api.handleGetUserFavorites;
+    } else if (activeTab.value == "likes") {
+        tempApi.value = api.handleGetUserLikes;
+    }
     loading.value = true;
-    /*
-    let params = {
-        pageNo: articleListInfo.value.pageNo || 1,
-        type: activeTab.value, // post, comment, collect
-        userId: userId.value
-    };
     let result = await proxy.Request({
-        url: api.loadUserArticles,
-        params: params
+        url: tempApi.value,
+        method: "GET",
+        params: {
+            pageNo: articleListInfo.value.page || 1,
+        }
     });
     loading.value = false;
     if (!result) {
         return;
     }
-    articleListInfo.value = result.data;
-    */
-
-    // 本地模拟数据
-    console.log(`Loading local articles for tab: ${activeTab.value}`);
-    setTimeout(() => {
-        let mockList = [];
-        // 根据不同Tab生成不同的模拟数据标题
-        const prefix = activeTab.value === 'post' ? '【原创】' : activeTab.value === 'comment' ? '【评论过】' : '【收藏】';
-        
-        for (let i = 0; i < 5; i++) {
-            mockList.push({
-                articleId: `${activeTab.value}_${i}`,
-                userId: userInfo.value.userId,
-                nickName: userInfo.value.nickName,
-                postTime: "2023-02-12 20:21:21",
-                boardId: "backend",
-                boardName: "Easybbs开发 / 开发资料",
-                topType: 0,
-                title: `${prefix} Vue3 + SpringBoot 实战开发系列教程 - 第 ${i+1} 篇`,
-                summary: "本系列教程将带你从零开始开发一个功能完整的论坛系统，涵盖前后端技术栈...",
-                readCount: 2110 + i * 10,
-                goodCount: 3 + i,
-                commentCount: 1 + i,
-            });
-        }
-
-        articleListInfo.value = {
-            pageNo: 1,
-            pageSize: 10,
-            totalCount: 20,
-            pageTotal: 2,
-            dataList: mockList
-        };
-        loading.value = false;
-    }, 500);
+    articleListInfo.value.data = result.data;
 };
 
 const changeTab = (tabName) => {
     activeTab.value = tabName;
     // 重置分页并重新加载
-    articleListInfo.value = {}; 
+    articleListInfo.value = {};
     loadArticleList();
 };
 
@@ -120,42 +147,71 @@ watch(
     (newVal, oldVal) => {
         if (newVal) {
             userId.value = newVal;
-            loadUserInfo();
+            loadType.value = "ucenter";
+            if (store.getters.getLoginUserInfo && store.getters.getLoginUserInfo.account == newVal) {
+                loadType.value = "personalCenter";
+                loadArticleList();
+                getPostCount();
+            }
+        } else {
+            userId.value = null;
+            loadType.value = "personalCenter";
             loadArticleList();
+            getPostCount();
         }
+        loadUserInfo();
     },
     { immediate: true, deep: true }
 );
 
+watch(
+    () => store.state.loginUserInfo,
+    (newVal) => {
+        // 如果用户信息加载完成，且当前查看的是自己的主页
+        if (newVal && newVal.data.account == userId.value) {
+            loadType.value = "personalCenter";
+            // 重新加载以获取完整权限的数据
+            loadUserInfo();
+            loadArticleList();
+            getPostCount();
+        }
+    },
+    { immediate: true, deep: true }
+);
 </script>
 
 <template>
-    <div 
-        class="body-container ucenter-body"
-        :style="{ width: proxy.globalInfo.bodyWidth + 'px' }"
-    >
+    <div class="body-container ucenter-body" :style="{ width: proxy.globalInfo.bodyWidth + 'px' }">
         <!-- 左侧个人信息 -->
         <div class="user-side">
             <div class="avatar-panel">
-                <Avatar :width="120" :userId="userInfo.userId"></Avatar>
+                <div class="avatar-inner">
+                    <Avatar :width="120" :userId="userInfo.account"></Avatar>
+                    <div class="edit-btn" v-if="loadType == 'personalCenter'" @click="updateUserInfoHandler">
+                        修改
+                    </div>
+                </div>
             </div>
             <div class="nick-name">
-                {{ userInfo.nickName }}
-                <span v-if="userInfo.sex == 1" class="iconfont icon-man"></span>
-                <span v-if="userInfo.sex == 0" class="iconfont icon-woman"></span>
+                {{ userInfo.username }}
+                <br />
+                {{ userInfo.account }}
             </div>
             <div class="desc">
-                {{ userInfo.personDescription || '这个人很懒，什么都没写' }}
+                {{ userInfo.bio || '这个人很懒，什么都没写' }}
             </div>
-            
+            <div class="post-count" v-if="loadType == 'personalCenter'">
+                贴子数: {{ postCount }}
+            </div>
+
             <!-- 身份信息区域 -->
             <div class="user-extend-panel">
                 <div class="info-item">
                     <span class="label iconfont icon-user"></span>
-                    <span class="value">{{ userInfo.roleType == "student" ? '学生' : '老师' }}</span>
+                    <span class="value">{{ userInfo.role == "student" ? '学生' : '老师' }}</span>
                 </div>
                 <!-- 学生特有信息 -->
-                <template v-if="userInfo.roleType == 'student' ">
+                <template v-if="userInfo.role == 'student'">
                     <div class="info-item">
                         <span class="label iconfont icon-school"></span>
                         <span class="value">{{ userInfo.major }}</span>
@@ -169,34 +225,54 @@ watch(
         </div>
 
         <!-- 右侧内容列表 -->
-        <div class="article-panel">
+        <div class="article-panel" v-if="loadType == 'personalCenter'">
             <div class="tabs-container">
                 <el-tabs v-model="activeTab" @tab-change="changeTab">
                     <el-tab-pane label="发帖" name="post"></el-tab-pane>
+                    <el-tab-pane label="点赞" name="likes"></el-tab-pane>
                     <el-tab-pane label="评论" name="comment"></el-tab-pane>
-                    <el-tab-pane label="收藏" name="collect"></el-tab-pane>
+                    <el-tab-pane label="收藏" name="favourite"></el-tab-pane>
                 </el-tabs>
             </div>
-            <div class="article-list">
-                <DataList 
-                    :loading="loading" 
-                    :dataSource="articleListInfo" 
-                    @loadData="loadArticleList"
-                >
-                    <template #default="{data}">
+            <div class="article-list" v-if="activeTab == 'post' || activeTab == 'favourite' || activeTab == 'likes'">
+                <DataList :loading="loading" :dataSource="articleListInfo" @loadData="loadArticleList">
+                    <template #default="{ data }">
                         <ArticleListItem :data="data"></ArticleListItem>
                     </template>
                 </DataList>
             </div>
+            <div class="article-list" v-else-if="activeTab == 'comment'">
+                <DataList :loading="loading" :dataSource="articleListInfo" @loadData="loadArticleList">
+                    <template #default="{ data }">
+                        <div></div>
+                    </template>
+                </DataList>
+            </div>
+        </div>
+        <div class="article-panel" v-else>
+            仅用户本人可查看
         </div>
     </div>
+
+    <Dialog :show="dialogConfig.show" :title="dialogConfig.title" :buttons="dialogConfig.buttons" width="400px"
+        :showCancel="true" @close="dialogConfig.show = false">
+        <el-form :model="formData" label-width="60px">
+            <el-form-item label="昵称">
+                <el-input v-model="formData.username" placeholder="请输入昵称"></el-input>
+            </el-form-item>
+            <el-form-item label="简介">
+                <el-input v-model="formData.bio" type="textarea" :rows="5" placeholder="请输入简介" maxlength="100"
+                    show-word-limit></el-input>
+            </el-form-item>
+        </el-form>
+    </Dialog>
 </template>
 
 <style scoped lang="scss">
 .ucenter-body {
     display: flex;
     margin-top: 10px;
-    
+
     .user-side {
         width: 300px;
         margin-right: 10px;
@@ -209,6 +285,20 @@ watch(
 
         .avatar-panel {
             margin-bottom: 10px;
+
+            .avatar-inner {
+                position: relative;
+                display: inline-block;
+
+                .edit-btn {
+                    position: absolute;
+                    top: 0;
+                    right: -40px;
+                    font-size: 14px;
+                    color: var(--link);
+                    cursor: pointer;
+                }
+            }
         }
 
         .nick-name {
@@ -218,13 +308,16 @@ watch(
             display: flex;
             align-items: center;
             margin-bottom: 10px;
+
             .iconfont {
                 margin-left: 5px;
                 font-size: 16px;
             }
+
             .icon-man {
                 color: var(--link);
             }
+
             .icon-woman {
                 color: var(--pink);
             }
@@ -242,14 +335,14 @@ watch(
             width: 100%;
             border-top: 1px solid #f0f0f0;
             padding-top: 15px;
-            
+
             .info-item {
                 display: flex;
                 align-items: center;
                 margin-bottom: 10px;
                 font-size: 14px;
                 color: #666;
-                
+
                 .label {
                     margin-right: 10px;
                     font-size: 16px;
@@ -257,7 +350,7 @@ watch(
                     width: 20px;
                     text-align: center;
                 }
-                
+
                 .value {
                     flex: 1;
                 }
@@ -269,12 +362,13 @@ watch(
         flex: 1;
         background: #fff;
         padding: 0 15px 15px 15px;
-        
+
         .tabs-container {
             :deep(.el-tabs__nav-wrap::after) {
                 height: 1px;
                 background-color: #f0f0f0;
             }
+
             :deep(.el-tabs__item) {
                 font-size: 16px;
             }

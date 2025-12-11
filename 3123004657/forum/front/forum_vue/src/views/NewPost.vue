@@ -9,6 +9,11 @@ const router = useRouter();
 const store = useStore();
 const isAnonymous = ref(false);
 
+const api = {
+    handleCreatePost: "/posts",
+    handleUpdatePost: "/posts/id",
+}
+
 const formData = ref({
     title: '',
     boardId: '',
@@ -34,7 +39,7 @@ watch(
 
 const rules = {
     title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-    boardId: [{ required: true, message: '请选择板块', trigger: 'change' }],
+    category: [{ required: true, message: '请选择板块', trigger: 'change' }],
     content: [{ required: true, message: '请输入正文内容', trigger: 'blur' }],
 };
 
@@ -49,18 +54,16 @@ const postHandler = () => {
 
         let params = {
             title: formData.value.title,
-            boardId: formData.value.boardId,
-            content: formData.value.content, // HTML内容
-            markdownContent: formData.value.markdownContent, // Markdown源码
-            isAnonymous: isAnonymous.value
+            category: formData.value.category,
+            content: formData.value.markdownContent, // Markdown源码
+            is_anonymous: isAnonymous.value
         };
 
         console.log("提交参数：", params);
 
-        /* 
         // API 接口调用预留
         let result = await proxy.Request({
-            url: '/forum/postArticle',
+            url: api.handleCreatePost,
             params: params,
             method: 'post', // 或根据后端要求
         });
@@ -68,16 +71,9 @@ const postHandler = () => {
         if (!result) {
             return;
         }
-        
-        ElMessage.success('发布成功');
-        router.push(`/post/${result.data.articleId}`);
-        */
 
-        // 本地模拟成功
-        ElMessage.success('发布成功 (本地模拟)');
-        setTimeout(() => {
-            router.push('/');
-        }, 1000);
+        ElMessage.success('发布成功');
+        router.push(`/post/${result.data.post_id}`);
     });
 };
 
@@ -94,44 +90,30 @@ const handleEditorChange = (text, html) => {
         <div class="post-panel">
             <div class="panel-title">
                 发布文章
-                <div class="anonymous-checkbox" >
+                <div class="anonymous-checkbox">
                     <el-checkbox v-model="isAnonymous">匿名发布</el-checkbox>
                 </div>
             </div>
             <el-form :model="formData" :rules="rules" ref="formRef" label-width="0px">
                 <!-- 标题输入 -->
                 <el-form-item prop="title">
-                    <el-input 
-                        v-model="formData.title" 
-                        placeholder="请输入标题" 
-                        maxlength="50"
-                        show-word-limit
-                        class="title-input"
-                    ></el-input>
+                    <el-input v-model="formData.title" placeholder="请输入标题" maxlength="50" show-word-limit
+                        class="title-input"></el-input>
                 </el-form-item>
 
                 <!-- 板块选择 -->
                 <el-form-item prop="boardId">
-                    <el-select v-model="formData.boardId" placeholder="请选择板块" style="width: 100%;">
-                        <el-option 
-                            v-for="item in boardList" 
-                            :key="item.boardId" 
-                            :label="item.boardName" 
-                            :value="item.boardId"
-                        ></el-option>
+                    <el-select v-model="formData.category" placeholder="请选择板块" style="width: 100%;">
+                        <el-option v-for="item in boardList" :key="item.category" :label="item.boardName"
+                            :value="item.category"></el-option>
                     </el-select>
                 </el-form-item>
 
                 <!-- Markdown 编辑器 -->
                 <el-form-item prop="content">
-                    <v-md-editor
-                        v-model="formData.markdownContent"
-                        :height="'500px'"
-                        :disabled-menus="[]"
-                        :left-toolbar="toolbarConfig"
-                        placeholder="请输入正文内容（不支持图片上传）"
-                        @change="handleEditorChange"
-                    ></v-md-editor>
+                    <v-md-editor v-model="formData.markdownContent" :height="'500px'" :disabled-menus="[]"
+                        :left-toolbar="toolbarConfig" placeholder="请输入正文内容（不支持图片上传）"
+                        @change="handleEditorChange"></v-md-editor>
                 </el-form-item>
 
                 <!-- 提交按钮 -->
@@ -146,10 +128,12 @@ const handleEditorChange = (text, html) => {
 <style scoped lang="scss">
 .body-container {
     margin-top: 10px;
+
     .post-panel {
         background: #fff;
         padding: 20px;
         border-radius: 5px;
+
         .panel-title {
             display: flex;
             justify-content: space-between;
@@ -159,9 +143,11 @@ const handleEditorChange = (text, html) => {
             margin-bottom: 20px;
             color: #333;
         }
+
         .title-input {
             font-size: 16px;
             font-weight: bold;
+
             :deep(.el-input__wrapper) {
                 box-shadow: none;
                 border-bottom: 1px solid #ddd;
@@ -169,6 +155,7 @@ const handleEditorChange = (text, html) => {
                 padding-left: 0;
             }
         }
+
         .post-btn {
             width: 150px;
         }

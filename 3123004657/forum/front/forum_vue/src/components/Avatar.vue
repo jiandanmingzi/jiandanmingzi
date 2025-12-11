@@ -1,7 +1,7 @@
 <script setup>
 import { getCurrentInstance } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-const {proxy} = getCurrentInstance();
+const { proxy } = getCurrentInstance();
 const router = useRouter();
 const route = useRoute();
 const props = defineProps({
@@ -16,7 +16,7 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
-    color:{
+    color: {
         type: String,
         default: '#c0c4cc',
     }
@@ -24,28 +24,27 @@ const props = defineProps({
 
 const goToUcenter = () => {
     if (props.addLink) {
+        if (!props.userId) {
+            return;
+        }
         router.push({ path: "/ucenter/" + proxy.userId });
     }
 };
 </script>
 
 <template>
-<div
-    class="avatar"
-    :style="{ 
-        width: width + 'px', 
-        height: width + 'px' ,
+    <div class="avatar" :style="{
+        width: width + 'px',
+        height: width + 'px',
         'border-radius': (width / 2) + 'px',
         'background-color': color,
         'coursor': addLink ? 'pointer' : 'default'
-    }"
-    @click="goToUcenter"
-    >
-</div>
+    }" @click="goToUcenter">
+    </div>
 </template>
 
 <style scoped lang="scss">
-.avatar{
+.avatar {
     cursor: pointer;
 }
 </style>
