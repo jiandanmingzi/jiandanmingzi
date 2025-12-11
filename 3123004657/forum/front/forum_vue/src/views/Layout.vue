@@ -258,10 +258,10 @@ const logout = async () => {
                     <el-button type="primary" @click="handleSearch()">
                         搜索<span class="iconfont icon-search"></span>
                     </el-button>
-                    <div v-if="userInfo.userId">
+                    <div v-if="userInfo.account">
                         <div class="message-info">
                             <el-dropdown class="message-dropdown" @click="goToNoticeCenter()">
-                                <el-badge :value="12" class="item">
+                                <el-badge :value="unReadCount" :hidden="unReadCount <= 0" class="item">
                                     <div class="iconfont icon-message">
                                     </div>
                                 </el-badge>
@@ -274,7 +274,7 @@ const logout = async () => {
                         </div>
                         <div class="user-info">
                             <el-dropdown>
-                                <avatar :userId="userInfo.userId"></avatar>
+                                <avatar :userId="userInfo.account"></avatar>
                                 <template #dropdown>
                                     <el-dropdown-menu>
                                         <el-dropdown-item @click="goToPersonalCenter()">个人主页</el-dropdown-item>

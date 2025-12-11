@@ -8,7 +8,7 @@ const contentTypeJson = 'application/json;charset=UTF-8'
 
 const instance = axios.create({
   baseURL: '/api',
-  timeout: 1 * 1000,
+  timeout: 30 * 1000,
 })
 
 //请求前过滤器

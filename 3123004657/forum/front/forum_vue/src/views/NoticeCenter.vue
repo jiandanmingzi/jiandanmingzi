@@ -19,6 +19,7 @@ const api = {
 };
 
 const loadData = async () => {
+    console.log("加载通知数据");
     loading.value = true;
     let params = {
         page: messageListInfo.value.page || 1,
@@ -37,23 +38,45 @@ const loadData = async () => {
     messageListInfo.value = result.data;
 
 };
+
+loadData();
+
+const markAllAsRead = async () => {
+    let result = await proxy.Request({
+        dataType: "json",
+        method: "PUT",
+        url: api.handleMarkAllAsRead,
+    });
+
+    if (result) {
+        proxy.$message.success("全部标记已读成功");
+        loadData();
+    }
+};
+
+const deleteNotification = async (notificationId) => {
+    let result = await proxy.Request({
+        dataType: "json",
+        method: "DELETE",
+        url: api.handleDeleteNotification,
+        params: {
+            notification_id: notificationId,
+        }
+    });
+
+    if (result) {
+        proxy.$message.success("删除通知成功");
+        loadData();
+    }
+};
+
 </script>
 
 <template>
     <div class="body-container notice-body" :style="{ width: proxy.globalInfo.bodyWidth + 'px' }">
-        <!-- 左侧导航 -->
-        <div class="side-menu">
-            <div v-for="item in tabList" :key="item.type"
-                :class="['menu-item', activeTab === item.type ? 'active' : '']" @click="changeTab(item.type)">
-                <span :class="['iconfont', item.icon]"></span>
-                {{ item.name }}
-            </div>
-        </div>
 
         <!-- 右侧列表 -->
         <div class="notice-panel">
-            <div class="panel-title">{{tabList.find(t => t.type === activeTab)?.name}}</div>
-
             <DataList :loading="loading" :dataSource="messageListInfo" @loadData="loadData">
                 <template #default="{ data }">
                     <div class="message-item">

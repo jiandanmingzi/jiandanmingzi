@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import ArticleListItem from '@/views/ArticleListItem.vue';
 import { dataType } from 'element-plus/es/components/table-v2/src/common';
-import { pa } from 'element-plus/es/locale';
 
 const { proxy } = getCurrentInstance();
 const route = useRoute();

@@ -8,12 +8,11 @@ const is_anonymous = ref(false);
 
 const props = defineProps({
     articleId: {
-        type: String,
+        type: Number,
         required: true,
     },
     articleUserId: {
-        type: String,
-        required: true,
+        type: Number,
     },
     totalCount: {
         type: Number,
@@ -69,7 +68,7 @@ const getChildCommentCount = async (parent_id) => {
     if (!result) {
         return 0;
     }
-    return result.count;
+    return result.data.count;
 };
 
 // 分页加载子评论
@@ -127,6 +126,7 @@ const loadComment = async () => {
         item.replyContent = "";
         item.showSubPagination = false;
         item.is_anonymous = false;
+        item.subCommentInfo = {};
         item.liked = await isLiked(item.comment_id);
         item.subCommentInfo.total_count = await getChildCommentCount(item.comment_id);
         if (item.subCommentInfo.total_count > 0) {
@@ -137,14 +137,15 @@ const loadComment = async () => {
         }
     }
 };
+loadComment();
 
 const postCommentHandler = async (item = null) => {
-    if (!commentContent.value) {
-        proxy.$message.warning("请输入评论内容");
-        return;
-    }
     let result;
     if (item) {
+        if (!item.replyContent) {
+            proxy.$message.warning("请输入回复内容");
+            return;
+        }
         result = await proxy.Request({
             url: api.handleCreateComment,
             dataType: "json",
@@ -157,6 +158,10 @@ const postCommentHandler = async (item = null) => {
             method: 'post',
         });
     } else {
+        if (!commentContent.value) {
+            proxy.$message.warning("请输入评论内容");
+            return;
+        }
         result = await proxy.Request({
             url: api.handleCreateComment,
             dataType: "json",
@@ -181,6 +186,7 @@ const postCommentHandler = async (item = null) => {
 
 const doLike = async (item) => {
     let result = await proxy.Request({
+        showLoading: false,
         url: api.handleToggleCommentLike,
         dataType: "json",
         params: {
@@ -192,12 +198,12 @@ const doLike = async (item) => {
     if (!result) {
         return;
     }
-    if (result.data.status == 'success') {
+    if (result.status == 'success') {
         item.liked = !item.liked;
         if (item.liked) {
-            item.goodCount += 1;
+            item.like_count += 1;
         } else {
-            item.goodCount -= 1;
+            item.like_count -= 1;
         }
     }
 };
@@ -271,7 +277,7 @@ const changeOrder = (type) => {
 
                             <!-- 子评论列表 -->
                             <div class="sub-comment-list"
-                                v-if="data.subCommentInfo && data.subCommentInfo.data.length > 0">
+                                v-if="data.subCommentInfo && data.subCommentInfo.total_count > 0">
 
                                 <!-- 未展开状态：只显示前3条 -->
                                 <template v-if="!data.showSubPagination">
@@ -284,6 +290,7 @@ const changeOrder = (type) => {
                                             <div class="nick-name">
                                                 <span class="name">{{ sub.username }}</span>
                                                 <span v-if="sub.account === articleUserId" class="author-tag">作者</span>
+                                                <span class="reply-text"> 回复: </span>
                                                 <span class="sub-text" v-html="sub.content"></span>
                                             </div>
                                             <div class="comment-info">
@@ -297,9 +304,9 @@ const changeOrder = (type) => {
                                         </div>
                                     </div>
                                     <!-- 展开按钮 -->
-                                    <div class="more-comment" v-if="data.subCommentInfo.totalCount > 3">
+                                    <div class="more-comment" v-if="data.subCommentInfo.total_count > 3">
                                         <span @click="data.showSubPagination = true">
-                                            共{{ data.subCommentInfo.totalCount }}条回复，点击查看
+                                            共{{ data.subCommentInfo.total_count }}条回复，点击查看
                                         </span>
                                     </div>
                                 </template>
@@ -347,7 +354,7 @@ const changeOrder = (type) => {
                                     maxlength="800" show-word-limit resize="none"></el-input>
                                 <div class="reply-btn-box">
                                     <el-button type="primary" size="small"
-                                        @click="postCommentHandler(item)">回复</el-button>
+                                        @click="postCommentHandler(data)">回复</el-button>
                                     <div class="anonymous-checkbox">
                                         <el-checkbox v-model="data.is_anonymous">匿名发布</el-checkbox>
                                     </div>

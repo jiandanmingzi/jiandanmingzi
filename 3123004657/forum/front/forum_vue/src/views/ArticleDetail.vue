@@ -15,7 +15,7 @@ const collected = ref(false);
 const api = {
     handleGetPostDetail: '/posts/handleGetPostDetail',
     handleToggleLike: '/posts/id/like',
-    handleToggleFavorite: '/posts/id/collect',
+    handleToggleFavorite: '/posts/id/favorite',
     handleIsPostLiked: '/posts/id/is-liked',
     handleIsPostFavorited: '/posts/id/is-favorited',
 }
@@ -23,6 +23,7 @@ const api = {
 const getArticleDetail = async (articleId) => {
     let result = await proxy.Request({
         url: api.handleGetPostDetail,
+        method: 'POST',
         dataType: "json",
         params: {
             post_id: articleId,
@@ -33,12 +34,12 @@ const getArticleDetail = async (articleId) => {
         return;
     }
     articleInfo.value = result.data;
-    store.commit("saveBoardId", result.data.category);
 };
 
 const getIsLikedAndCollected = async (articleId) => {
     let likeResult = await proxy.Request({
         url: api.handleIsPostLiked,
+        method: 'POST',
         dataType: "json",
         params: {
             post_id: articleId,
@@ -54,6 +55,7 @@ const getIsLikedAndCollected = async (articleId) => {
     let collectResult = await proxy.Request({
         url: api.handleIsPostFavorited,
         dataType: "json",
+        method: 'POST',
         params: {
             post_id: articleId,
         },
@@ -69,9 +71,10 @@ const getIsLikedAndCollected = async (articleId) => {
 watch(
     () => route.params,
     (newVal, oldVal) => {
-        if (newVal.articleId) {
-            getArticleDetail(newVal.articleId);
-            getIsLikedAndCollected(newVal.articleId);
+        const articleId = parseInt(newVal.articleId, 10);
+        if (!isNaN(articleId) && articleId > 0) {
+            getArticleDetail(articleId);
+            getIsLikedAndCollected(articleId);
         }
     },
     {
@@ -91,18 +94,19 @@ const doLikeHandler = async () => {
         return;
     }
     let result = await proxy.Request({
+        showLoading: false,
         url: api.handleToggleLike,
         dataType: "json",
+        method: 'POST',
         params: {
             post_id: articleInfo.value.post_id,
         },
-        method: 'post',
     });
 
     if (!result) {
         return;
     }
-    if (result.data.status == 'success') {
+    if (result.status == 'success') {
         liked.value = !liked.value;
         if (liked.value) {
             articleInfo.value.like_count += 1;
@@ -119,18 +123,19 @@ const doCollectHandler = async () => {
         return;
     }
     let result = await proxy.Request({
+        showLoading: false,
         url: api.handleToggleFavorite,
         dataType: "json",
         params: {
             post_id: articleInfo.value.post_id,
         },
-        method: 'post',
+        method: 'POST',
     });
 
     if (!result) {
         return;
     }
-    if (result.data.status == 'success') {
+    if (result.status == 'success') {
         collected.value = !collected.value;
     }
 };
@@ -144,9 +149,11 @@ const doCollectHandler = async () => {
                 <div class="user-info">
                     <Avatar :userId="articleInfo.account"></Avatar>
                     <div class="article-user-info">
-                        <router-link class="nick-name" :to="`/ucenter/${articleInfo.account}`">
+                        <router-link class="nick-name" :to="`/ucenter/${articleInfo.account}`"
+                            v-if="articleInfo.account != null">
                             {{ articleInfo.username }}
                         </router-link>
+                        <span class="nick-name" v-else>匿名用户</span>
                         <div class="article-info">
                             <span>{{ articleInfo.created_at }}</span>
                             <span class="iconfont icon-eye-solid">

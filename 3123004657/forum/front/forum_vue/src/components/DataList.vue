@@ -12,7 +12,7 @@ const props = defineProps({
 
 const emit = defineEmits(["loadData"]);
 const handlePageNoChange = (page) => {
-    props.dataSource.value.page = page;
+    props.dataSource.page = page;
     emit("loadData")
 };
 </script>
@@ -24,8 +24,8 @@ const handlePageNoChange = (page) => {
     <div class="skeleton" v-if="loading">
         <el-skeleton row="2" animated></el-skeleton>
     </div>
-    <div v-for="item in dataSource.data" v-if="!loading">
-        <slot :data="item"></slot>
+    <div v-for="item in dataSource.data" v-if="!loading" class="dataList">
+        <slot :data="item" class="eachData"></slot>
     </div>
     <div class="pagination">
         <el-pagination v-if="dataSource.total_count > dataSource.page_size" background :total="dataSource.total_count"
@@ -38,6 +38,10 @@ const handlePageNoChange = (page) => {
 <style scoped lang="scss">
 .skeleton {
     padding: 15px;
+}
+
+.dataList {
+    margin-bottom: 15px;
 }
 
 .pagination {
