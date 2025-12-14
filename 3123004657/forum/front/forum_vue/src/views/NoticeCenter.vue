@@ -10,12 +10,28 @@ const router = useRouter();
 
 const loading = ref(false);
 const messageListInfo = ref({});
+const unReadCount = ref(0);
 
 const api = {
     handleGetNotifications: "/notifications",
     handleMarkAsRead: "/notifications/id/read",
     handleMarkAllAsRead: "/notifications/read-all",
     handleDeleteNotification: "/notifications/id",
+    handleDeleteAllReadNotifications: "/notifications/read",
+    handleGetUnreadCount: "/notifications/unread-count",
+};
+
+const getUnReadNoticeCount = async () => {
+    let result = await proxy.Request({
+        url: api.handleGetUnreadCount,
+        dataType: "json",
+        method: 'get',
+    });
+
+    if (!result) {
+        return 0;
+    }
+    unReadCount.value = result.data.unread_count;
 };
 
 const loadData = async () => {
@@ -35,8 +51,8 @@ const loadData = async () => {
     if (!result) {
         return;
     }
-    messageListInfo.value = result.data;
-
+    messageListInfo.value = result;
+    getUnReadNoticeCount();
 };
 
 loadData();
@@ -51,6 +67,41 @@ const markAllAsRead = async () => {
     if (result) {
         proxy.$message.success("全部标记已读成功");
         loadData();
+    }
+};
+
+const deleteAllNotifications = async () => {
+    proxy.$confirm('确认要删除所有已读通知吗？', '提示', {
+        type: 'warning',
+    }).then(async () => {
+        let result = await proxy.Request({
+            dataType: "json",
+            method: "DELETE",
+            url: api.handleDeleteAllReadNotifications,
+        });
+
+        if (result) {
+            proxy.$message.success("删除成功");
+            loadData();
+        }
+    }).catch(() => { });
+};
+
+const readNotification = async (notificationId) => {
+    let result = await proxy.Request({
+        dataType: "json",
+        method: "PUT",
+        url: api.handleMarkAsRead,
+        params: {
+            notification_id: notificationId,
+        }
+    });
+    if (result) {
+        const item = messageListInfo.value.data.find(x => x.notification_id === notificationId);
+        if (item) {
+            item.is_read = 1;
+            getUnReadNoticeCount();
+        }
     }
 };
 
@@ -75,62 +126,37 @@ const deleteNotification = async (notificationId) => {
 <template>
     <div class="body-container notice-body" :style="{ width: proxy.globalInfo.bodyWidth + 'px' }">
 
-        <!-- 右侧列表 -->
         <div class="notice-panel">
+            <div class="header-actions">
+                <div class="text">通知中心</div>
+                <div class="btn-group">
+                    <el-button type="primary" :disabled="unReadCount == 0" @click="markAllAsRead">已读所有通知</el-button>
+                    <el-button type="danger"
+                        :disabled="!messageListInfo.total_count || messageListInfo.total_count == 0"
+                        @click="deleteAllNotifications">删除所有已读通知</el-button>
+                </div>
+            </div>
             <DataList :loading="loading" :dataSource="messageListInfo" @loadData="loadData">
                 <template #default="{ data }">
                     <div class="message-item">
-                        <!-- 系统消息没有头像 -->
-                        <div class="avatar-box" v-if="activeTab !== 'system'">
-                            <Avatar :userId="data.sendUserId" :width="50"></Avatar>
+                        <div class="avatar-box">
+                            <Avatar :userId="data.sender_account" :width="50"></Avatar>
                         </div>
-
                         <div class="message-content">
-                            <!-- 回复我的 -->
-                            <template v-if="activeTab === 'reply'">
-                                <div class="info-line">
-                                    <router-link :to="`/ucenter/${data.sendUserId}`" class="user-link">{{
-                                        data.sendUserNickName }}</router-link>
-                                    <span class="text">回复了你的文章</span>
-                                    <router-link :to="`/post/${data.articleId}`" class="article-link">《{{
-                                        data.articleTitle }}》</router-link>
-                                </div>
-                                <div class="reply-content">{{ data.messageContent }}</div>
-                            </template>
-
-                            <!-- 赞了文章 -->
-                            <template v-if="activeTab === 'likePost'">
-                                <div class="info-line">
-                                    <router-link :to="`/ucenter/${data.sendUserId}`" class="user-link">{{
-                                        data.sendUserNickName }}</router-link>
-                                    <span class="text">赞了你的文章</span>
-                                    <router-link :to="`/post/${data.articleId}`" class="article-link">《{{
-                                        data.articleTitle }}》</router-link>
-                                </div>
-                            </template>
-
-                            <!-- 赞了评论 -->
-                            <template v-if="activeTab === 'likeComment'">
-                                <div class="info-line">
-                                    <router-link :to="`/ucenter/${data.sendUserId}`" class="user-link">{{
-                                        data.sendUserNickName }}</router-link>
-                                    <span class="text">赞了你在文章</span>
-                                    <router-link :to="`/post/${data.articleId}`" class="article-link">《{{
-                                        data.articleTitle }}》</router-link>
-                                    <span class="text">下的评论</span>
-                                </div>
-                                <div class="reply-content">{{ data.messageContent }}</div>
-                            </template>
-
-                            <!-- 系统消息 -->
-                            <template v-if="activeTab === 'system'">
-                                <div class="info-line">
-                                    <span class="system-title">{{ data.articleTitle }}</span>
-                                </div>
-                                <div class="reply-content">{{ data.messageContent }}</div>
-                            </template>
-
-                            <div class="time-info">{{ data.createTime }}</div>
+                            <div :class="['content-text', data.is_read == 0 ? 'unread' : 'read']">
+                                <router-link v-if="data.sender_account" :to="`/ucenter/${data.sender_account}`"
+                                    class="user-link">
+                                    {{ data.sender_username }}
+                                </router-link>
+                                <span v-else class="system-sender">系统通知</span>
+                                <span class="message-body">{{ data.content }}</span>
+                            </div>
+                            <div class="time-info">{{ data.created_at }}</div>
+                        </div>
+                        <div class="op-btn">
+                            <span v-if="data.is_read == 0" class="btn-text"
+                                @click="readNotification(data.notification_id)">已读</span>
+                            <span class="btn-text delete" @click="deleteNotification(data.notification_id)">删除</span>
                         </div>
                     </div>
                 </template>
@@ -145,55 +171,30 @@ const deleteNotification = async (notificationId) => {
     margin-top: 10px;
     min-height: 500px;
 
-    .side-menu {
-        width: 200px;
-        background: #fff;
-        margin-right: 10px;
-        padding: 10px 0;
-
-        .menu-item {
-            padding: 15px 20px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #333;
-            display: flex;
-            align-items: center;
-
-            .iconfont {
-                margin-right: 10px;
-                font-size: 18px;
-            }
-
-            &:hover {
-                background: #f5f7fa;
-                color: var(--link);
-            }
-
-            &.active {
-                background: #e6f7ff; // 浅蓝色背景
-                color: var(--link);
-                border-right: 3px solid var(--link);
-            }
-        }
-    }
-
     .notice-panel {
         flex: 1;
         background: #fff;
         padding: 20px;
 
-        .panel-title {
-            font-size: 18px;
-            font-weight: bold;
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
             padding-bottom: 10px;
             border-bottom: 1px solid #f0f0f0;
+
+            .text {
+                font-size: 18px;
+                font-weight: bold;
+            }
         }
 
         .message-item {
             display: flex;
             padding: 15px 0;
             border-bottom: 1px solid #eee;
+            align-items: flex-start;
 
             .avatar-box {
                 margin-right: 15px;
@@ -203,8 +204,9 @@ const deleteNotification = async (notificationId) => {
                 flex: 1;
                 font-size: 14px;
 
-                .info-line {
-                    margin-bottom: 8px;
+                .content-text {
+                    margin-bottom: 5px;
+                    line-height: 1.5;
 
                     .user-link {
                         color: #333;
@@ -217,38 +219,58 @@ const deleteNotification = async (notificationId) => {
                         }
                     }
 
-                    .text {
-                        color: #666;
-                        margin: 0 5px;
-                    }
-
-                    .article-link {
-                        color: var(--link);
-                        text-decoration: none;
-
-                        &:hover {
-                            text-decoration: underline;
-                        }
-                    }
-
-                    .system-title {
-                        font-weight: bold;
+                    .system-sender {
                         color: #333;
+                        font-weight: bold;
+                        margin-right: 5px;
+                    }
+
+                    .message-body {
+                        margin-left: 5px;
                     }
                 }
 
-                .reply-content {
-                    background: #f9f9f9;
-                    padding: 10px;
-                    border-radius: 4px;
-                    color: #666;
-                    margin-bottom: 8px;
-                    line-height: 1.5;
+                .unread {
+                    color: #000;
+                    font-size: 16px;
+                    font-weight: bold;
+
+                    .user-link,
+                    .system-sender {
+                        font-size: 16px;
+                    }
+                }
+
+                .read {
+                    color: #999;
+                    font-size: 14px;
+
+                    .user-link {
+                        color: #999;
+                    }
                 }
 
                 .time-info {
                     font-size: 12px;
                     color: #999;
+                }
+            }
+
+            .op-btn {
+                display: flex;
+                align-items: center;
+                margin-left: 10px;
+                align-self: flex-end;
+
+                .btn-text {
+                    cursor: pointer;
+                    font-size: 13px;
+                    margin-left: 10px;
+                    color: var(--link);
+                }
+
+                .delete {
+                    color: #f56c6c;
                 }
             }
         }

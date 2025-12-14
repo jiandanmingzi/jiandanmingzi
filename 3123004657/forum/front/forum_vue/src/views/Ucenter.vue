@@ -42,7 +42,9 @@ const api = {
     handleGetUserFavorites: "/users/id/favorites",
     handleGetUserLikes: "/users/id/likes",
     handleGetUserCommentLikes: "/users/id/comment-likes",
-    handleGetUserBasicInfo: "/users/basic-info"
+    handleGetUserBasicInfo: "/users/basic-info",
+    handleGetCommentDetail: "/comments/detail",
+    handleDeleteComment: "/comments/id"
 };
 
 const getPostCount = async () => {
@@ -123,14 +125,48 @@ const loadArticleList = async () => {
         url: tempApi.value,
         method: "GET",
         params: {
-            pageNo: articleListInfo.value.page || 1,
+            page: articleListInfo.value.page || 1,
         }
     });
     loading.value = false;
     if (!result) {
         return;
     }
-    articleListInfo.value.data = result.data;
+    articleListInfo.value = result;
+    if (activeTab.value == "comment" && articleListInfo.value.data) {
+        for (let item of articleListInfo.value.data) {
+            if (item.parent_id && item.parent_id > 0) {
+                let commentDetailResult = await proxy.Request({
+                    url: api.handleGetCommentDetail,
+                    method: "POST",
+                    params: {
+                        comment_id: item.parent_id
+                    }
+                });
+                if (commentDetailResult && commentDetailResult.status == 'success') {
+                    item.parent_comment = commentDetailResult.data;
+                }
+            }
+        }
+    }
+};
+
+const handleDeleteComment = async (commentId) => {
+    proxy.$confirm('确认要删除这条评论吗？', '提示', {
+        type: 'warning',
+    }).then(async () => {
+        let result = await proxy.Request({
+            url: api.handleDeleteComment,
+            method: "DELETE",
+            params: {
+                comment_id: commentId
+            }
+        });
+        if (result) {
+            proxy.$message.success("删除评论成功");
+            loadArticleList();
+        }
+    }).catch(() => { });
 };
 
 const changeTab = (tabName) => {
@@ -243,7 +279,25 @@ watch(
             <div class="article-list" v-else-if="activeTab == 'comment'">
                 <DataList :loading="loading" :dataSource="articleListInfo" @loadData="loadArticleList">
                     <template #default="{ data }">
-                        <div></div>
+                        <div class="comment-item">
+                            <div class="comment-content">
+                                <div class="content-text">
+                                    {{ data.content }}
+                                </div>
+                                <div class="parent-comment"
+                                    v-if="data.parent_id && data.parent_id != 0 && data.parent_comment">
+                                    回复 <span class="parent-user">@{{ data.parent_comment.username }}</span>: {{
+                                        data.parent_comment.content }}
+                                </div>
+                                <div class="comment-info">
+                                    <span class="time">{{ data.created_at }}</span>
+                                    <router-link :to="`/post/${data.post_id}`" class="post-link">查看原帖</router-link>
+                                </div>
+                            </div>
+                            <div class="op-btn">
+                                <span class="iconfont icon-del" @click="handleDeleteComment(data.comment_id)">删除</span>
+                            </div>
+                        </div>
                     </template>
                 </DataList>
             </div>
@@ -370,6 +424,71 @@ watch(
 
             :deep(.el-tabs__item) {
                 font-size: 16px;
+            }
+        }
+
+        .comment-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+
+            .comment-content {
+                flex: 1;
+
+                .content-text {
+                    font-size: 15px;
+                    color: #333;
+                    margin-bottom: 8px;
+                }
+
+                .parent-comment {
+                    background: #f5f7fa;
+                    padding: 10px;
+                    border-radius: 4px;
+                    font-size: 13px;
+                    color: #666;
+                    margin-bottom: 8px;
+
+                    .parent-user {
+                        color: var(--link);
+                        margin-right: 5px;
+                    }
+                }
+
+                .comment-info {
+                    font-size: 13px;
+                    color: #999;
+
+                    .time {
+                        margin-right: 15px;
+                    }
+
+                    .post-link {
+                        color: var(--link);
+                        text-decoration: none;
+
+                        &:hover {
+                            text-decoration: underline;
+                        }
+                    }
+                }
+            }
+
+            .op-btn {
+                display: flex;
+                align-items: flex-end;
+                margin-left: 15px;
+
+                .icon-del {
+                    color: #f56c6c;
+                    cursor: pointer;
+                    font-size: 13px;
+
+                    &::before {
+                        margin-right: 3px;
+                    }
+                }
             }
         }
     }

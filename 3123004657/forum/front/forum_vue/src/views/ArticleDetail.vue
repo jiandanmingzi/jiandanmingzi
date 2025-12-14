@@ -6,6 +6,7 @@ import { useStore } from 'vuex';
 import CommentList from './CommentList.vue';
 const { proxy } = getCurrentInstance();
 const route = useRoute();
+const router = useRouter();
 const store = useStore();
 
 const articleInfo = ref({});
@@ -18,6 +19,7 @@ const api = {
     handleToggleFavorite: '/posts/id/favorite',
     handleIsPostLiked: '/posts/id/is-liked',
     handleIsPostFavorited: '/posts/id/is-favorited',
+    handleDeletePost: '/posts/id',
 }
 
 const getArticleDetail = async (articleId) => {
@@ -139,6 +141,28 @@ const doCollectHandler = async () => {
         collected.value = !collected.value;
     }
 };
+
+const handleEdit = () => {
+    router.push(`/editPost/${articleInfo.value.post_id}`);
+};
+
+const handleDelete = () => {
+    proxy.$confirm('确认要删除这篇文章吗？', '提示', {
+        type: 'warning',
+    }).then(async () => {
+        const result = await proxy.Request({
+            url: api.handleDeletePost,
+            method: 'DELETE',
+            params: {
+                post_id: articleInfo.value.post_id,
+            },
+        });
+        if (result) {
+            proxy.$message.success('删除成功');
+            router.push(`/`);
+        }
+    }).catch(() => { });
+};
 </script>
 
 <template>
@@ -160,6 +184,11 @@ const doCollectHandler = async () => {
                                 {{ articleInfo.view_count == 0 ? "阅读" : articleInfo.view_count }}
                             </span>
                         </div>
+                    </div>
+                    <div class="op-btn"
+                        v-if="store.state.loginUserInfo && store.state.loginUserInfo.data && articleInfo.account == store.state.loginUserInfo.data.account">
+                        <span class="btn-text" @click="handleEdit">编辑</span>
+                        <span class="btn-text delete" @click="handleDelete">删除</span>
                     </div>
                 </div>
                 <div class="detail" id="detail">
@@ -232,6 +261,23 @@ const doCollectHandler = async () => {
 
                     .iconfont::before {
                         padding-right: 3px;
+                    }
+                }
+            }
+
+            .op-btn {
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+
+                .btn-text {
+                    margin-left: 10px;
+                    cursor: pointer;
+                    color: var(--link);
+                    font-size: 14px;
+
+                    &.delete {
+                        color: #f56c6c;
                     }
                 }
             }

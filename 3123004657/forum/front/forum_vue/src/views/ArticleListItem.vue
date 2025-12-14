@@ -9,15 +9,36 @@ const props = defineProps({
     data: {
         type: Object
     },
+    showIsTop: {
+        type: Boolean,
+        default: false
+    }
 })
+
+const printProps = () => {
+    console.log("ArticleListItem props:", props.data);
+}
+printProps();
 
 const api = {
     handleDeletePost: '/posts/id',
 }
 
+const boardName = ref('');
+
+const loadBoardName = () => {
+    let boardList = store.state.boardList || [];
+    let board = boardList.find(item => item.boardId == props.data.category);
+    if (board) {
+        boardName.value = board.boardName;
+    }
+}
+loadBoardName();
+
 const getAccount = () => {
     if (store.state.loginUserInfo && store.state.loginUserInfo.data) {
-        account.value = store.state.loginUserInfo.data.account;
+        account.value = store.state.loginUserInfo.data.account.toString();
+        console.log("当前登录用户account：", account.value);
     }
 }
 
@@ -30,14 +51,22 @@ watch(
 );
 
 const deletePost = async () => {
-    const result = await proxy.Request({
-        url: api.handleDeletePost,
-        method: 'DELETE',
-    });
-    if (result) {
-        proxy.$message.success('删除成功');
-        proxy.$router.go(0);
-    }
+    proxy.$confirm('确认要删除这篇文章吗？', '提示', {
+        type: 'warning',
+    }).then(async () => {
+        const result = await proxy.Request({
+            url: api.handleDeletePost,
+            method: 'DELETE',
+            dataType: "json",
+            params: {
+                post_id: props.data.post_id,
+            },
+        });
+        if (result) {
+            proxy.$message.success('删除成功');
+            proxy.$router.go(0);
+        }
+    }).catch(() => { });
 }
 </script>
 
@@ -57,11 +86,11 @@ const deletePost = async () => {
                     <div class="post-time">{{ data.created_at }}</div>
                     <el-divider direction="vertical"></el-divider>
                     <router-link :to="`/forum/${data.category}`" class="link-info">
-                        {{ data.category }}
+                        {{ boardName }}
                     </router-link>
                 </div>
                 <router-link :to="`/post/${data.post_id}`" class="article-title">
-                    <span v-if="data.is_top == 1" class="top">
+                    <span v-if="showIsTop && data.is_top == 1" class="top">
                         置顶
                     </span>
                     <span class="title">{{ data.title }}</span>
@@ -79,7 +108,7 @@ const deletePost = async () => {
                             {{ data.comment_count == 0 ? '评论' : data.comment_count }}
                         </span>
                     </div>
-                    <div class="delete" v-if="data.accout && account.value == data.account">
+                    <div class="delete" v-if="data.account && account == data.account">
                         <span class="iconfont icon-del" @click="deletePost">
                             删除
                         </span>

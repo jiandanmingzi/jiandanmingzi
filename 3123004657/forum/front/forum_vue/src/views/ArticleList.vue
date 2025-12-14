@@ -37,7 +37,6 @@ const changOrderType = (type) => {
 }
 
 const loadArticle = async (reason) => {
-    console.log("loadArticle triggered by: ", reason);
     loading.value = true;
     const tempApi = ref();
     let params = {
@@ -181,7 +180,7 @@ watch(
             <div class="article-list">
                 <DataList :loading="loading" :dataSource="articleListInfo" @loadData="loadArticle">
                     <template #default="{ data }">
-                        <ArticleListItem :data="data"></ArticleListItem>
+                        <ArticleListItem :data="data" :showIsTop="true"></ArticleListItem>
                     </template>
                 </DataList>
             </div>

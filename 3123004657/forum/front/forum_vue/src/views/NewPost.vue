@@ -1,17 +1,19 @@
 <script setup>
 import { ref, reactive, getCurrentInstance, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useStore } from 'vuex';
 import { ElMessage } from 'element-plus';
 
 const { proxy } = getCurrentInstance();
 const router = useRouter();
+const route = useRoute();
 const store = useStore();
 const isAnonymous = ref(false);
 
 const api = {
     handleCreatePost: "/posts",
     handleUpdatePost: "/posts/id",
+    handleGetPostDetail: '/posts/handleGetPostDetail',
 }
 
 const formData = ref({
@@ -24,18 +26,13 @@ const formData = ref({
 const formRef = ref();
 const boardList = ref([]);
 
-// 获取板块列表，用于发帖选择
 const loadBoardList = () => {
-    boardList.value = store.state.boardList || [];
+    if (store.getters.getLoginUserInfo && store.getters.getLoginUserInfo.data.role == "student") {
+        boardList.value = store.getters.getBoardList.filter(item => item.boardId != "announcement");
+    } else {
+        boardList.value = store.getters.getBoardList;
+    }
 };
-// 监听store变化，防止刷新页面时store未初始化
-watch(
-    () => store.state.boardList,
-    (newVal) => {
-        boardList.value = newVal;
-    },
-    { immediate: true }
-);
 
 const rules = {
     title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
@@ -59,21 +56,30 @@ const postHandler = () => {
             is_anonymous: isAnonymous.value
         };
 
-        console.log("提交参数：", params);
+        console.log("提交的文章参数：", params);
 
-        // API 接口调用预留
-        let result = await proxy.Request({
-            url: api.handleCreatePost,
-            params: params,
-            method: 'post', // 或根据后端要求
-        });
+        let result;
+        if (articleId.value) {
+            params.post_id = articleId.value;
+            result = await proxy.Request({
+                url: api.handleUpdatePost,
+                params: params,
+                method: 'put',
+            });
+        } else {
+            result = await proxy.Request({
+                url: api.handleCreatePost,
+                params: params,
+                method: 'post',
+            });
+        }
 
         if (!result) {
             return;
         }
 
-        ElMessage.success('发布成功');
-        router.push(`/post/${result.data.post_id}`);
+        ElMessage.success(articleId.value ? '修改成功' : '发布成功');
+        router.push(`/`);
     });
 };
 
@@ -83,6 +89,54 @@ const handleEditorChange = (text, html) => {
     formData.value.content = html;
 };
 
+const articleId = ref(null);
+const getArticleDetail = async () => {
+    let result = await proxy.Request({
+        url: api.handleGetPostDetail,
+        method: 'POST',
+        dataType: "json",
+        params: {
+            post_id: articleId.value,
+        },
+    });
+
+    if (result && result.data) {
+        let data = result.data;
+        formData.value.title = data.title;
+        formData.value.category = data.category;
+        formData.value.markdownContent = data.content;
+        formData.value.content = data.content; // 假设编辑器能处理
+        isAnonymous.value = data.is_anonymous == 1;
+    }
+};
+
+watch(
+    () => route.params,
+    (newVal) => {
+        if (newVal.articleId) {
+            articleId.value = parseInt(newVal.articleId, 10);
+            getArticleDetail();
+        } else {
+            articleId.value = null;
+            formData.value = {
+                title: '',
+                boardId: '',
+                content: '',
+                markdownContent: '',
+            };
+        }
+    },
+    { immediate: true }
+);
+
+watch(
+    () => [store.state.loginUserInfo, store.state.boardList],
+    () => {
+        loadBoardList();
+    },
+    { immediate: true }
+);
+
 </script>
 
 <template>
@@ -91,7 +145,7 @@ const handleEditorChange = (text, html) => {
             <div class="panel-title">
                 发布文章
                 <div class="anonymous-checkbox">
-                    <el-checkbox v-model="isAnonymous">匿名发布</el-checkbox>
+                    <el-checkbox v-model="isAnonymous" :disabled="articleId != null">匿名发布</el-checkbox>
                 </div>
             </div>
             <el-form :model="formData" :rules="rules" ref="formRef" label-width="0px">
@@ -103,9 +157,10 @@ const handleEditorChange = (text, html) => {
 
                 <!-- 板块选择 -->
                 <el-form-item prop="boardId">
-                    <el-select v-model="formData.category" placeholder="请选择板块" style="width: 100%;">
-                        <el-option v-for="item in boardList" :key="item.category" :label="item.boardName"
-                            :value="item.category"></el-option>
+                    <el-select v-model="formData.category" placeholder="请选择板块" style="width: 100%;"
+                        :disabled="articleId != null">
+                        <el-option v-for="item in boardList" :key="item.boardId" :label="item.boardName"
+                            :value="item.boardId"></el-option>
                     </el-select>
                 </el-form-item>
 

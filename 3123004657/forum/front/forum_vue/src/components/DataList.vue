@@ -12,7 +12,11 @@ const props = defineProps({
 
 const emit = defineEmits(["loadData"]);
 const handlePageNoChange = (page) => {
-    props.dataSource.page = page;
+    if (props.dataSource.value) {
+        props.dataSource.value.page = page;
+    } else {
+        props.dataSource.page = page;
+    }
     emit("loadData")
 };
 </script>
