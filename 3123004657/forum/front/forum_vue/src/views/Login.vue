@@ -206,9 +206,6 @@ const doSubmit = () => {
                     </el-input>
                 </el-form-item>
                 <el-form-item>
-                    <div class="rememberme-panel" v-if="opType == 1">
-                        <el-checkbox v-model="formData.rememberMe">记住我</el-checkbox>
-                    </div>
                     <div class="change-password-panel" v-if="opType == 1" @click="showPanel(0)">
                         <a href="javascript:void(0)" class="a-link">重置密码</a>
                     </div>

@@ -46,7 +46,7 @@ const loadArticle = async (reason) => {
         params.category = boardId.value;
     }
     if (yearId.value != 0 && boardId.value != 0) {
-        params.grade = yearId.value;
+        params.grade = yearId.value.toString();
     }
     if (roleId.value != 0 && boardId.value != 0) {
         params.role = roleId.value;
